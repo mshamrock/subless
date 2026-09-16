@@ -304,6 +304,7 @@ export default async function ContestPage({
                       <EntryShare
                         entryId={entry.entryId}
                         challengeSlug={contest.slug}
+                        projectSlug={entry.slug}
                         projectName={entry.name}
                         targetName={contest.targetName}
                         yearly={

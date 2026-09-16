@@ -13,6 +13,8 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { BRAND } from "@/lib/brand";
+import { BadgeSnippet } from "@/components/badge-snippet";
 import {
   getAuthorSummary,
   getGithubDetails,
@@ -53,6 +55,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   if (!project) notFound();
 
   const userId = session?.user?.id;
+  const isAuthor = Boolean(userId) && project.submittedById === userId;
   const host = prettyHost(project.homepageUrl);
 
   const [upvoted, author, mySwitches, details, testRating] = await Promise.all([
@@ -215,6 +218,24 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          {/* Only the author sees it: it goes in their repository, and for
+              anyone else it is a control they cannot act on */}
+          {isAuthor && (
+            <section className="card p-6">
+              <h2 className="eyebrow mb-1">Badge for your README</h2>
+              <p className="mb-4 text-xs text-[var(--color-faint)]">
+                It says what this build replaces, and switches to asking for votes on its own
+                while a challenge it entered is running.
+              </p>
+              <BadgeSnippet
+                imageUrl={`${BRAND.url}/api/badge/project/${project.slug}`}
+                linkUrl={`${BRAND.url}/projects/${project.slug}`}
+                alt={`${project.name} on Subless`}
+                note="People who find your repository first see what it stands in for — and the link is a backlink that helps the whole catalog get found."
+              />
+            </section>
+          )}
+
           {project.description && (
             <section className="card p-6">
               <h2 className="eyebrow mb-3">About</h2>

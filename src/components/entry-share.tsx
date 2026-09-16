@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Link2, Share2 } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BadgeSnippet } from "./badge-snippet";
 
 /**
  * The share control on your own entry.
@@ -15,12 +16,14 @@ import { BRAND } from "@/lib/brand";
 export function EntryShare({
   entryId,
   challengeSlug,
+  projectSlug,
   projectName,
   targetName,
   yearly,
 }: {
   entryId: number;
   challengeSlug: string;
+  projectSlug: string;
   projectName: string;
   targetName: string | null;
   yearly: string | null;
@@ -97,6 +100,18 @@ export function EntryShare({
           <p className="mono truncate text-[11px] text-[var(--color-faint)]" title={url}>
             {url}
           </p>
+
+          {/* The badge asks for votes for as long as the challenge runs, and
+              keeps working as a link to the build once it stops */}
+          <div className="border-t border-[var(--color-border)] pt-3">
+            <p className="mb-2 text-xs font-medium">Badge for your README</p>
+            <BadgeSnippet
+              imageUrl={`${BRAND.url}/api/badge/project/${projectSlug}`}
+              linkUrl={url}
+              alt={`${projectName} on Subless`}
+              note="Everyone who opens your repository sees the challenge is running."
+            />
+          </div>
         </div>
       )}
     </div>

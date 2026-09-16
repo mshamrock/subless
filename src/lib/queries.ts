@@ -196,6 +196,57 @@ export async function getProjectBySlug(slug: string) {
   return { ...withTargets, wins };
 }
 
+/**
+ * What a project's README badge should say right now.
+ *
+ * The badge lives on someone else's page and is fetched by GitHub's image
+ * proxy, so it answers from the slug alone and stays cheap: one row for the
+ * project, one for whichever challenge it is currently up for.
+ */
+export async function getProjectBadgeState(slug: string) {
+  const [project] = await db
+    .select({
+      id: projects.id,
+      slug: projects.slug,
+      name: projects.name,
+      status: projects.status,
+    })
+    .from(projects)
+    .where(eq(projects.slug, slug))
+    .limit(1);
+
+  if (!project) return null;
+
+  // A build can sit in several challenges over time; only one is ever open
+  const [live] = await db
+    .select({
+      entryId: contestEntries.id,
+      contestSlug: contests.slug,
+      contestStatus: contests.status,
+      targetName: targets.name,
+    })
+    .from(contestEntries)
+    .innerJoin(contests, eq(contests.id, contestEntries.contestId))
+    .leftJoin(targets, eq(targets.id, contests.targetId))
+    .where(
+      and(
+        eq(contestEntries.projectId, project.id),
+        inArray(contests.status, ["building", "voting"]),
+      ),
+    )
+    .orderBy(desc(contestEntries.id))
+    .limit(1);
+
+  const [replaces] = await db
+    .select({ name: targets.name })
+    .from(projectTargets)
+    .innerJoin(targets, eq(targets.id, projectTargets.targetId))
+    .where(eq(projectTargets.projectId, project.id))
+    .limit(1);
+
+  return { project, live: live ?? null, replaces: replaces?.name ?? null };
+}
+
 /** Every project this user has upvoted — one query per page instead of N. */
 export async function getUserUpvotes(userId: string) {
   const rows = await db
