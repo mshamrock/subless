@@ -43,6 +43,13 @@
       "when": 1789571105029,
       "tag": "0005_classy_ego",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789572982446,
+      "tag": "0006_tranquil_giant_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -34,6 +34,7 @@ export function EntryVoteCard({
   canVote,
   isOwn,
   showResult = false,
+  footer,
 }: {
   entry: EntryCardData;
   contestId: number;
@@ -41,6 +42,8 @@ export function EntryVoteCard({
   canVote: boolean;
   isOwn: boolean;
   showResult?: boolean;
+  /** Rendered full width under the card — the testing checklist lives here. */
+  footer?: React.ReactNode;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +128,8 @@ export function EntryVoteCard({
         </div>
 
         {error && <p className="mt-2 text-xs text-[var(--color-danger)]">{error}</p>}
+
+        {footer}
       </div>
 
       <div className="relative z-10 shrink-0">

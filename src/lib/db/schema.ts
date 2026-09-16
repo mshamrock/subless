@@ -356,6 +356,45 @@ export const contestVotes = pgTable(
   (t) => [primaryKey({ columns: [t.contestId, t.userId] })],
 );
 
+/* ────────────────────────────────  Testing  ──────────────────────────────── */
+
+/**
+ * Step 4 of the Subless model: users try the builds and report gaps.
+ *
+ * A report is one person's verdict on one entry, checked against the challenge's
+ * own requirement list. That list is what the community already agreed a
+ * replacement must do, so testing against it turns "I liked it" into something
+ * a voter can act on.
+ *
+ * The requirement text is stored with each answer rather than an index into the
+ * challenge. Requirements get edited; an index quietly starts pointing at a
+ * different line and every past report becomes a lie about what was checked.
+ */
+export const testReports = pgTable(
+  "test_reports",
+  {
+    id: serial("id").primaryKey(),
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => contestEntries.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    items: jsonb("items").$type<{ requirement: string; met: boolean }[]>().notNull(),
+    /** What broke, what was missing, what to fix. Optional but the useful part. */
+    note: text("note"),
+
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }),
+  },
+  // One verdict per person per build; testing again replaces it rather than stacking
+  (t) => [
+    uniqueIndex("test_reports_unique").on(t.entryId, t.userId),
+    index("test_reports_entry_idx").on(t.entryId),
+  ],
+);
+
 /* ────────────────────────────────  Nominations: what to clone next  ──────────────────────────────── */
 
 export const nominationStatus = ["pending", "approved", "hidden", "rejected", "promoted"] as const;
@@ -582,4 +621,9 @@ export const switchesRelations = relations(switches, ({ one }) => ({
   user: one(users, { fields: [switches.userId], references: [users.id] }),
   target: one(targets, { fields: [switches.targetId], references: [targets.id] }),
   project: one(projects, { fields: [switches.projectId], references: [projects.id] }),
+}));
+
+export const testReportsRelations = relations(testReports, ({ one }) => ({
+  entry: one(contestEntries, { fields: [testReports.entryId], references: [contestEntries.id] }),
+  user: one(users, { fields: [testReports.userId], references: [users.id] }),
 }));

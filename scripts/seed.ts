@@ -313,6 +313,40 @@ async function main() {
     }
   }
 
+  console.log("Test reports…");
+  // One disagreement on purpose: with every tester agreeing, the coverage bars
+  // are all-or-nothing and the averaging is invisible in a fresh install
+  const [calEntry] = await db
+    .select()
+    .from(s.contestEntries)
+    .where(eq(s.contestEntries.contestId, voting.id))
+    .orderBy(s.contestEntries.id)
+    .limit(1);
+
+  if (calEntry) {
+    const reqs = [
+      "Public page showing available slots",
+      "Sync with Google Calendar or CalDAV",
+      "Automatic video meeting creation",
+      "Confirmation emails and reminders",
+      "Time zones handled on the guest's side",
+    ];
+    await db.insert(s.testReports).values([
+      {
+        entryId: calEntry.id,
+        userId: userIds[3],
+        items: reqs.map((r, i) => ({ requirement: r, met: i < 3 })),
+        note: "Booking page and calendar sync work. No reminder emails, and the guest timezone is read from the browser rather than asked for.",
+      },
+      {
+        entryId: calEntry.id,
+        userId: userIds[4],
+        items: reqs.map((r, i) => ({ requirement: r, met: i < 2 })),
+        note: "Could not get the video link to generate on my account.",
+      },
+    ]);
+  }
+
   console.log("Recorded switches…");
   // Without a few of these the North Star reads $0 on a fresh install, which
   // makes the headline metric look broken rather than honest

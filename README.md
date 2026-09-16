@@ -408,11 +408,43 @@ something to consider"; a seeded vote count would be fabricated demand, and
 demand is the one thing this site cannot invent without undermining its own
 headline number.
 
+## Testing
+
+Step 4 of the model. Under every challenge entry, anyone signed in can work
+through the challenge's own requirement list and mark what the build actually
+does, with a note for what broke.
+
+Testing against **the list the community already agreed on** is what turns "I
+liked it" into something a voter can act on. A build showing *3/5 verified* next
+to one showing *5/5* is a different decision from two builds with four stars each.
+
+Coverage is shown per requirement rather than as a single number, because which
+requirement is failing matters more than the average of all of them. A
+requirement nobody has tested reads as zero coverage with zero testers — honestly
+different from tested and failing.
+
+Each answer stores the **requirement text**, not an index into the challenge.
+Requirements get edited; an index quietly starts pointing at a different line and
+every past report becomes a lie about what was checked.
+
+Testing stays open after voting closes: the brief's order is Build → Test → Use,
+and the person adopting a launched winner is exactly the one whose report is
+worth having. Testing your own entry is blocked, for the same reason voting for
+it is.
+
+This is where **Community rating** on a project page comes from: the share of
+required features testers found working, averaged across every challenge it
+entered. Grounded in checklists rather than a star widget — stars tell you people
+liked it, this tells you which promises it keeps.
+
 ## Not built yet
 
-- **The Test step.** The brief's pipeline is Submit → Vote → Build → **Test** →
-  Use → Go Subless. Structured feedback against a challenge's requirement
-  checklist does not exist; comments are the whole of it today.
+- **Outbound email beyond three messages.** No digest preferences, no per-event
+  opt-out — it is on or off.
+- **Editing.** A submitted build or nomination cannot be corrected by its author;
+  only an admin can hide or delete it.
+- **Rate limiting.** Nothing throttles comments, nominations or submissions. Fine
+  while it is quiet; the first time it is not, this is what breaks.
 
 ## Deploying
 

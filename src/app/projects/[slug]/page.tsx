@@ -17,6 +17,7 @@ import {
   getAuthorSummary,
   getGithubDetails,
   getProjectBySlug,
+  getProjectTestRating,
   getUserSwitchedTargets,
   hasUpvoted,
 } from "@/lib/queries";
@@ -54,13 +55,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const userId = session?.user?.id;
   const host = prettyHost(project.homepageUrl);
 
-  const [upvoted, author, mySwitches, details] = await Promise.all([
+  const [upvoted, author, mySwitches, details, testRating] = await Promise.all([
     userId ? hasUpvoted(project.id, userId) : Promise.resolve(false),
     project.submittedById
       ? getAuthorSummary(project.submittedById)
       : Promise.resolve(null),
     userId ? getUserSwitchedTargets(userId) : Promise.resolve(new Set<number>()),
     getGithubDetails(project.id),
+    getProjectTestRating(project.id),
   ]);
 
   // Offer the switch for the one subscription this build replaces; with several
@@ -219,6 +221,40 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <p className="whitespace-pre-line leading-relaxed text-[var(--color-fg)]">
                 {project.description}
               </p>
+            </section>
+          )}
+
+          {testRating && (
+            <section className="card p-6">
+              <h2 className="eyebrow mb-1">Community rating</h2>
+              <p className="mb-5 text-xs text-[var(--color-faint)]">
+                How much of what the challenge asked for testers found working.
+              </p>
+
+              <p className="mono text-3xl font-bold text-[var(--color-acid)]">
+                {Math.round(testRating.rating * 100)}%
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                of required features verified by {testRating.testers}{" "}
+                {testRating.testers === 1 ? "tester" : "testers"}
+              </p>
+
+              <ul className="mt-5 space-y-2">
+                {testRating.perChallenge.map((c) => (
+                  <li key={c.slug} className="flex items-center gap-3 text-sm">
+                    <Link
+                      href={`/challenges/${c.slug}`}
+                      className="min-w-0 flex-1 truncate text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+                    >
+                      {c.title}
+                    </Link>
+                    <span className="mono shrink-0 text-xs text-[var(--color-faint)]">
+                      {c.verified}/{c.total} verified · {c.testers}{" "}
+                      {c.testers === 1 ? "tester" : "testers"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

@@ -3,7 +3,14 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { getContestBySlug, getContestEntries, getUserProjects, getUserVote } from "@/lib/queries";
+import {
+  getContestBySlug,
+  getContestEntries,
+  getMyTestReport,
+  getTestSummary,
+  getUserProjects,
+  getUserVote,
+} from "@/lib/queries";
 import { canSubmitEntry, canVote } from "@/lib/cycle";
 import { EntryVoteCard } from "@/components/entry-vote-card";
 import { EntrySubmitForm } from "@/components/entry-submit-form";
@@ -11,6 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SignInButton } from "@/components/auth-buttons";
 import { TargetIcon } from "@/components/target-icon";
 import { CommentThread } from "@/components/comment-thread";
+import { TestPanel } from "@/components/test-panel";
 import { formatYearly, timeLeft } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +74,22 @@ export default async function ContestPage({ params }: { params: Promise<{ slug: 
     userId ? getUserVote(contest.id, userId) : Promise.resolve(null),
     userId ? getUserProjects(userId) : Promise.resolve([]),
   ]);
+
+  /**
+   * Testing stays open after voting closes. The brief's order is Build → Test →
+   * Use, and someone adopting a launched winner is exactly the person whose
+   * report is worth having.
+   */
+  const testingOpen = contest.status !== "queued";
+
+  const testData = await Promise.all(
+    entries.map(async (entry) => ({
+      entryId: entry.entryId,
+      summary: await getTestSummary(entry.entryId, contest.requirements),
+      mine: userId ? await getMyTestReport(entry.entryId, userId) : null,
+    })),
+  );
+  const testByEntry = new Map(testData.map((t) => [t.entryId, t]));
 
   const phase = PHASE_COPY[contest.status] ?? PHASE_COPY.archived;
   const showResults = contest.status === "finished" || contest.status === "archived";
@@ -208,17 +232,36 @@ export default async function ContestPage({ params }: { params: Promise<{ slug: 
             }
           />
         ) : (
-          entries.map((entry) => (
-            <EntryVoteCard
-              key={entry.entryId}
-              entry={entry}
-              contestId={contest.id}
-              votedEntryId={userVote}
-              canVote={votingOpen && Boolean(userId)}
-              isOwn={Boolean(userId) && myProjects.some((p) => p.id === entry.projectId)}
-              showResult={showResults}
-            />
-          ))
+          entries.map((entry) => {
+            const isOwn = Boolean(userId) && myProjects.some((p) => p.id === entry.projectId);
+            const test = testByEntry.get(entry.entryId);
+
+            return (
+              <div key={entry.entryId}>
+                <EntryVoteCard
+                  entry={entry}
+                  contestId={contest.id}
+                  votedEntryId={userVote}
+                  canVote={votingOpen && Boolean(userId)}
+                  isOwn={isOwn}
+                  showResult={showResults}
+                  footer={
+                    test ? (
+                      <TestPanel
+                        entryId={entry.entryId}
+                        requirements={contest.requirements}
+                        summary={test.summary}
+                        mine={test.mine}
+                        canTest={testingOpen}
+                        isOwn={isOwn}
+                        signedIn={Boolean(userId)}
+                      />
+                    ) : null
+                  }
+                />
+              </div>
+            );
+          })
         )}
       </section>
 

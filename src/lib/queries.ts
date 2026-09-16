@@ -15,6 +15,7 @@ import {
   projectUpvotes,
   projects,
   switches,
+  testReports,
   targets,
   users,
 } from "@/lib/db/schema";
@@ -951,4 +952,139 @@ export async function getGithubDetails(projectId: number) {
     .where(eq(githubDetails.projectId, projectId))
     .limit(1);
   return row ?? null;
+}
+
+/* ────────────────────────────────  Testing  ──────────────────────────────── */
+
+export interface TestSummary {
+  testers: number;
+  /** Share of testers who found each requirement met, in the challenge's order. */
+  coverage: number[];
+  /** Mean across requirements — the community rating for this build. */
+  overall: number;
+  reports: {
+    id: number;
+    note: string | null;
+    createdAt: Date;
+    metCount: number;
+    total: number;
+    authorLogin: string | null;
+    authorName: string | null;
+    authorImage: string | null;
+  }[];
+}
+
+/**
+ * How well a build covers its challenge's requirements, as judged by testers.
+ *
+ * Coverage is computed against the challenge's *current* requirement list and
+ * matched by text, so a report written before an edit still counts for the lines
+ * that survived. A requirement nobody has tested reads as zero coverage with
+ * zero testers, which is honestly different from "tested and failing".
+ */
+export async function getTestSummary(
+  entryId: number,
+  requirements: string[],
+): Promise<TestSummary> {
+  const rows = await db
+    .select({
+      id: testReports.id,
+      items: testReports.items,
+      note: testReports.note,
+      createdAt: testReports.createdAt,
+      authorLogin: users.githubLogin,
+      authorName: users.name,
+      authorImage: users.image,
+    })
+    .from(testReports)
+    .leftJoin(users, eq(users.id, testReports.userId))
+    .where(eq(testReports.entryId, entryId))
+    .orderBy(desc(testReports.createdAt));
+
+  const counts = requirements.map(() => ({ met: 0, judged: 0 }));
+
+  for (const row of rows) {
+    for (const item of row.items) {
+      const index = requirements.indexOf(item.requirement);
+      if (index === -1) continue;
+      counts[index].judged++;
+      if (item.met) counts[index].met++;
+    }
+  }
+
+  const coverage = counts.map((c) => (c.judged === 0 ? 0 : c.met / c.judged));
+  const overall = coverage.length
+    ? coverage.reduce((sum, c) => sum + c, 0) / coverage.length
+    : 0;
+
+  return {
+    testers: rows.length,
+    coverage,
+    overall,
+    reports: rows.map((r) => ({
+      id: r.id,
+      note: r.note,
+      createdAt: r.createdAt,
+      metCount: r.items.filter((i) => i.met).length,
+      total: r.items.length,
+      authorLogin: r.authorLogin,
+      authorName: r.authorName,
+      authorImage: r.authorImage,
+    })),
+  };
+}
+
+/** This person's own report, so the form opens pre-filled rather than blank. */
+export async function getMyTestReport(entryId: number, userId: string) {
+  const [row] = await db
+    .select({ items: testReports.items, note: testReports.note })
+    .from(testReports)
+    .where(and(eq(testReports.entryId, entryId), eq(testReports.userId, userId)))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Community rating for a build: how much of what challenges asked for testers
+ * actually found working, averaged across every challenge it entered.
+ *
+ * Grounded in the requirement checklists rather than a star widget. A five-star
+ * average tells you people liked it; this tells you which promises it keeps.
+ */
+export async function getProjectTestRating(projectId: number) {
+  const entries = await db
+    .select({
+      entryId: contestEntries.id,
+      requirements: contests.requirements,
+      contestTitle: contests.title,
+      contestSlug: contests.slug,
+    })
+    .from(contestEntries)
+    .innerJoin(contests, eq(contests.id, contestEntries.contestId))
+    .where(eq(contestEntries.projectId, projectId));
+
+  if (entries.length === 0) return null;
+
+  const perChallenge = [];
+  for (const entry of entries) {
+    if (entry.requirements.length === 0) continue;
+    const summary = await getTestSummary(entry.entryId, entry.requirements);
+    if (summary.testers === 0) continue;
+    perChallenge.push({
+      title: entry.contestTitle,
+      slug: entry.contestSlug,
+      testers: summary.testers,
+      verified: summary.coverage.filter((c) => c >= 0.5).length,
+      total: entry.requirements.length,
+      overall: summary.overall,
+    });
+  }
+
+  if (perChallenge.length === 0) return null;
+
+  const testers = perChallenge.reduce((sum, c) => sum + c.testers, 0);
+  const rating =
+    perChallenge.reduce((sum, c) => sum + c.overall, 0) / perChallenge.length;
+
+  return { rating, testers, perChallenge };
 }
