@@ -422,6 +422,42 @@ export async function getTargetDemandMap(): Promise<Map<number, number>> {
   return map;
 }
 
+/**
+ * Whether a service page has anything to say yet.
+ *
+ * A page with no build and no votes is a template with a name dropped into it,
+ * and a hundred of those is what search engines call scaled content. Votes
+ * count as substance on purpose: "31 people want this replaced" is a fact that
+ * exists nowhere else, which is the whole argument for the page.
+ */
+export async function getTargetSubstance(targetId: number) {
+  const [builds] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(projectTargets)
+    .innerJoin(
+      projects,
+      and(eq(projects.id, projectTargets.projectId), eq(projects.status, "approved")),
+    )
+    .where(eq(projectTargets.targetId, targetId));
+
+  const votes = await getTargetDemand(targetId);
+  return { builds: builds?.n ?? 0, votes, indexable: (builds?.n ?? 0) > 0 || votes > 0 };
+}
+
+/** The same test for every service at once — what the sitemap is allowed to list. */
+export async function getIndexableTargetSlugs(): Promise<Set<string>> {
+  const [withBuilds, demand] = await Promise.all([
+    getTargetsWithCounts(),
+    getTargetDemandMap(),
+  ]);
+
+  return new Set(
+    withBuilds
+      .filter((t) => t.alternatives > 0 || (demand.get(t.id) ?? 0) > 0)
+      .map((t) => t.slug),
+  );
+}
+
 export async function getCategoriesWithCounts() {
   return db
     .select({

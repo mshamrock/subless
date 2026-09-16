@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { contests, projects, targets, users } from "@/lib/db/schema";
 import { BRAND } from "@/lib/brand";
+import { getIndexableTargetSlugs } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,10 @@ export const dynamic = "force-dynamic";
  * build yet, because those pages collect demand rather than traffic.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // A sitemap is a claim that these pages are worth indexing, so it must not
+  // contradict the noindex the empty ones carry
+  const indexable = await getIndexableTargetSlugs();
+
   const [targetRows, projectRows, challengeRows, builderRows] = await Promise.all([
     db.select({ slug: targets.slug }).from(targets),
     db
@@ -41,11 +46,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...targetRows.map((t) => ({
-      url: `${BRAND.url}/alternatives/${t.slug}`,
-      changeFrequency: "weekly" as const,
-      priority: 0.9,
-    })),
+    ...targetRows
+      .filter((t) => indexable.has(t.slug))
+      .map((t) => ({
+        url: `${BRAND.url}/alternatives/${t.slug}`,
+        changeFrequency: "weekly" as const,
+        priority: 0.9,
+      })),
     ...projectRows.map((p) => ({
       url: `${BRAND.url}/projects/${p.slug}`,
       lastModified: p.updatedAt ?? undefined,

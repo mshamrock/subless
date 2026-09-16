@@ -7,6 +7,7 @@ import { goSublessOn } from "@/lib/brand";
 import {
   getCatalog,
   getTargetBySlug,
+  getTargetSubstance,
   getTargetDemand,
   getTargetSwitchCount,
   getUserSwitchedTargets,
@@ -28,9 +29,16 @@ export async function generateMetadata({
   const { slug } = await params;
   const target = await getTargetBySlug(slug);
   if (!target) return { title: "Service not found" };
+
+  const substance = await getTargetSubstance(target.id);
+
   return {
     title: goSublessOn(target.name),
     description: `Free community-built alternatives to ${target.name}. ${formatYearly(target.monthlyPriceUsd)} you could stop paying.`,
+    // Nothing built and nobody asking yet: the page is a template with a name in
+    // it. `follow` stays on, so it still passes link equity to the catalog and
+    // comes back into the index by itself the moment it has either
+    robots: substance.indexable ? undefined : { index: false, follow: true },
   };
 }
 
