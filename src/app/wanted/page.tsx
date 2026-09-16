@@ -3,10 +3,15 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { BRAND } from "@/lib/brand";
-import { findCoveredTarget, getNominations, getUserNominationVotes } from "@/lib/queries";
+import {
+  findCoveredTarget,
+  getNominationCategories,
+  getNominations,
+  getUserNominationVotes,
+} from "@/lib/queries";
 import { NominationRow } from "@/components/nomination-row";
 import { NominationForm } from "@/components/nomination-form";
-import { WantedSearch } from "@/components/wanted-search";
+import { WantedFilters } from "@/components/wanted-filters";
 import { TargetIcon } from "@/components/target-icon";
 import { EmptyState } from "@/components/empty-state";
 import { SignInButton } from "@/components/auth-buttons";
@@ -22,22 +27,29 @@ export const dynamic = "force-dynamic";
 export default async function WantedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; category?: string }>;
 }) {
-  const { q = "" } = await searchParams;
+  const { q = "", category = "" } = await searchParams;
   const query = q.trim();
+  const activeCategory = category.trim();
 
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [nominations, allNominations, myVotes, covered] = await Promise.all([
-    getNominations("approved", query),
-    query ? getNominations("approved") : Promise.resolve(null),
+  const filtering = Boolean(query || activeCategory);
+
+  const [nominations, allNominations, categories, myVotes, covered] = await Promise.all([
+    getNominations("approved", query, activeCategory),
+    filtering ? getNominations("approved") : Promise.resolve(null),
+    getNominationCategories(),
     userId ? getUserNominationVotes(userId) : Promise.resolve(new Set<number>()),
     // Searching here may mean someone is about to nominate something the
     // community already replaced — worth saying so before they do
     query ? findCoveredTarget(query) : Promise.resolve(null),
   ]);
+
+  const categoryName =
+    categories.find((c) => c.slug === activeCategory)?.name ?? activeCategory;
 
   const total = allNominations?.length ?? nominations.length;
   const totalDemand = (allNominations ?? nominations).reduce((sum, n) => sum + n.votes, 0);
@@ -58,7 +70,11 @@ export default async function WantedPage({
         </p>
       </header>
 
-      <WantedSearch current={query} />
+      <WantedFilters
+        categories={categories}
+        total={total}
+        current={{ q: query, category: activeCategory }}
+      />
 
       {/* Already solved beats "not found": the answer they wanted is a working
           alternative, not the chance to ask for one */}
@@ -94,17 +110,25 @@ export default async function WantedPage({
               hint="Be the first — the form below already has it filled in. Say what you would actually need instead, and it becomes the challenge requirements."
             />
           ) : (
-            <EmptyState
-              title="Nothing nominated yet"
-              hint="Name a subscription you are tired of paying for. Once an admin checks it, everyone can vote."
-            />
+            activeCategory ? (
+              <EmptyState
+                title={`Nothing nominated under ${categoryName} yet`}
+                hint="Pick another category, or nominate the first subscription in this one."
+              />
+            ) : (
+              <EmptyState
+                title="Nothing nominated yet"
+                hint="Name a subscription you are tired of paying for. Once an admin checks it, everyone can vote."
+              />
+            )
           )
         ) : (
           <>
-            {query && (
+            {filtering && (
               <p className="mono text-xs text-[var(--color-faint)]">
-                {nominations.length} {plural(nominations.length, "match", "matches")} for
-                &quot;{query}&quot;
+                {nominations.length} {plural(nominations.length, "result", "results")}
+                {query && <> for &quot;{query}&quot;</>}
+                {activeCategory && <> in {categoryName}</>}
               </p>
             )}
             {nominations.map((n, i) => (
@@ -112,7 +136,7 @@ export default async function WantedPage({
                 key={n.id}
                 nomination={n}
                 voted={myVotes.has(n.id)}
-                rank={query ? undefined : i + 1}
+                rank={filtering ? undefined : i + 1}
               />
             ))}
           </>

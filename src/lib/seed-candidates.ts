@@ -11,6 +11,7 @@ export interface CandidateSeedResult {
   nominations: number;
   skipped: number;
   icons: number;
+  categorised: number;
 }
 
 /**
@@ -34,6 +35,7 @@ export async function seedCandidates(
     nominations: 0,
     skipped: 0,
     icons: 0,
+    categorised: 0,
   };
 
   const categoryIds = new Map<string, number>();
@@ -69,6 +71,15 @@ export async function seedCandidates(
         })
         .returning();
       result.services++;
+    }
+
+    // Backfill a category onto a service that predates this list. Without this
+    // the row is invisible under every category filter while still counting
+    // towards the total, which reads as a broken filter.
+    const categoryId = categoryIds.get(candidate.category) ?? null;
+    if (categoryId && !target.categoryId) {
+      await db.update(targets).set({ categoryId }).where(eq(targets.id, target.id));
+      result.categorised++;
     }
 
     if (!target.logoData) {

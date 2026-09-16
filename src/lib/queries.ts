@@ -472,8 +472,22 @@ export async function getUserProjects(userId: string) {
 export async function getNominations(
   status: "approved" | "pending" = "approved",
   q?: string,
+  category?: string,
 ) {
   const needle = q?.trim() ? `%${q.trim()}%` : null;
+
+  // Category lives on the service, not the nomination, so filtering means
+  // restricting to nominations whose target sits in that category
+  const inCategory = category?.trim()
+    ? inArray(
+        nominations.targetId,
+        db
+          .select({ id: targets.id })
+          .from(targets)
+          .innerJoin(categories, eq(categories.id, targets.categoryId))
+          .where(eq(categories.slug, category)),
+      )
+    : null;
 
   return db
     .select({
@@ -495,14 +509,15 @@ export async function getNominations(
     .leftJoin(targets, eq(targets.id, nominations.targetId))
     .leftJoin(nominationVotes, eq(nominationVotes.nominationId, nominations.id))
     .where(
-      needle
-        ? and(
-            eq(nominations.status, status),
-            // Match the pitch too: people describe what they need before they
-            // recall the product's exact name
-            or(ilike(nominations.targetName, needle), ilike(nominations.pitch, needle)),
-          )
-        : eq(nominations.status, status),
+      and(
+        eq(nominations.status, status),
+        // Match the pitch too: people describe what they need before they
+        // recall the product's exact name
+        needle
+          ? or(ilike(nominations.targetName, needle), ilike(nominations.pitch, needle))
+          : undefined,
+        inCategory ?? undefined,
+      ),
     )
     .groupBy(nominations.id, users.id, targets.id)
     .orderBy(desc(sql`count(${nominationVotes.userId})`), desc(nominations.createdAt));
@@ -904,4 +919,25 @@ export async function getBuilderLeaderboard(): Promise<BuilderRow[]> {
         b.totalScore - a.totalScore ||
         b.builds - a.builds,
     );
+}
+
+/** Categories that actually contain a nomination, busiest first. */
+export async function getNominationCategories() {
+  const rows = await db
+    .select({
+      slug: categories.slug,
+      name: categories.name,
+      emoji: categories.emoji,
+      count: sql<number>`count(distinct ${nominations.id})::int`,
+    })
+    .from(categories)
+    .innerJoin(targets, eq(targets.categoryId, categories.id))
+    .innerJoin(
+      nominations,
+      and(eq(nominations.targetId, targets.id), eq(nominations.status, "approved")),
+    )
+    .groupBy(categories.id)
+    .orderBy(desc(sql`count(distinct ${nominations.id})`), asc(categories.name));
+
+  return rows;
 }
