@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { BadgeCheck, CircleAlert, Check, Plus } from "lucide-react";
-import { submitProject, type SubmittedProject } from "@/lib/actions/projects";
+import {
+  submitProject,
+  type RepoOption,
+  type SubmittedProject,
+} from "@/lib/actions/projects";
+import { RepoPicker } from "./repo-picker";
 import { ActionMessage } from "./form-status";
 import type { ActionResult } from "@/lib/actions/guard";
 
@@ -20,6 +25,7 @@ export function SubmitProjectForm({
   const [result, setResult] = useState<ActionResult<SubmittedProject> | null>(null);
   const [submitted, setSubmitted] = useState<SubmittedProject | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
+  const [repo, setRepo] = useState<RepoOption | null>(null);
   const [showNewTarget, setShowNewTarget] = useState(false);
   const [filter, setFilter] = useState("");
 
@@ -56,6 +62,7 @@ export function SubmitProjectForm({
       setSubmitted(null);
       setResult(null);
       setSelected([]);
+      setRepo(null);
       setFilter("");
       setShowNewTarget(false);
     }} />;
@@ -67,8 +74,52 @@ export function SubmitProjectForm({
 
       <div className="card space-y-4 p-6">
         <div>
+          <h2 className="label mb-1">Which repository?</h2>
+          <p className="mb-3 text-xs text-[var(--color-faint)]">
+            Pick one and the rest fills itself in. Everything stays editable.
+          </p>
+          <RepoPicker
+            selected={repo}
+            onPick={(picked) => {
+              setRepo(picked);
+              if (picked) setResult(null);
+            }}
+          />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="repoUrl">
+            Repository URL{" "}
+            {repo && <span className="text-[var(--color-faint)]">(from your pick)</span>}
+          </label>
+          <input
+            id="repoUrl"
+            name="repoUrl"
+            required
+            placeholder="https://github.com/user/snimok"
+            // Keyed on the pick so choosing a different repository actually
+            // refreshes the field instead of keeping React's first render
+            key={`repo-${repo?.fullName ?? "manual"}`}
+            defaultValue={repo ? `https://github.com/${repo.fullName}` : ""}
+            className="input"
+          />
+          <p className="mt-1.5 text-xs text-[var(--color-faint)]">
+            We check through GitHub that you have write access. If the check passes, the card
+            gets a verified author badge.
+          </p>
+        </div>
+
+        <div>
           <label className="label" htmlFor="name">Name</label>
-          <input id="name" name="name" required placeholder="Snimok" className="input" />
+          <input
+            id="name"
+            name="name"
+            required
+            placeholder="Snimok"
+            key={`name-${repo?.fullName ?? "manual"}`}
+            defaultValue={repo?.name ?? ""}
+            className="input"
+          />
         </div>
 
         <div>
@@ -79,30 +130,31 @@ export function SubmitProjectForm({
             required
             maxLength={160}
             placeholder="Screenshots with the link already in your clipboard"
+            key={`tagline-${repo?.fullName ?? "manual"}`}
+            defaultValue={repo?.description ?? ""}
             className="input"
           />
-        </div>
-
-        <div>
-          <label className="label" htmlFor="repoUrl">Repository URL</label>
-          <input
-            id="repoUrl"
-            name="repoUrl"
-            required
-            placeholder="https://github.com/user/snimok"
-            className="input"
-          />
-          <p className="mt-1.5 text-xs text-[var(--color-faint)]">
-            We check through GitHub that you have write access to this repository. If the check
-            passes, the card gets a verified author badge.
-          </p>
+          {repo?.description && (
+            <p className="mt-1.5 text-xs text-[var(--color-faint)]">
+              Taken from your repository description — worth rewriting for someone deciding
+              whether to stop paying for something.
+            </p>
+          )}
         </div>
 
         <div>
           <label className="label" htmlFor="homepageUrl">
             Live demo <span className="text-[var(--color-faint)]">(optional)</span>
           </label>
-          <input id="homepageUrl" name="homepageUrl" type="url" placeholder="https://snimok.app" className="input" />
+          <input
+            id="homepageUrl"
+            name="homepageUrl"
+            type="url"
+            placeholder="https://snimok.app"
+            key={`home-${repo?.fullName ?? "manual"}`}
+            defaultValue={repo?.homepage ?? ""}
+            className="input"
+          />
           <p className="mt-1.5 text-xs text-[var(--color-faint)]">
             Leave blank and we take whatever your repository declares as its homepage.
             A live site gets a Try button on every card.

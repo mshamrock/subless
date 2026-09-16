@@ -14,7 +14,13 @@ import {
   targets,
 } from "@/lib/db/schema";
 import { auth, getUserGithubToken, requireUser } from "@/lib/auth";
-import { checkPublicRepo, parseRepoUrl, verifyRepoOwnership } from "@/lib/github";
+import {
+  checkPublicRepo,
+  listUserRepos,
+  parseRepoUrl,
+  verifyRepoOwnership,
+  type UserRepo,
+} from "@/lib/github";
 import { canSubmitEntry } from "@/lib/cycle";
 import { syncProject, recomputeScore } from "@/lib/sync";
 import { ensureTargetIcon } from "@/lib/targets";
@@ -239,6 +245,49 @@ async function uniqueProjectSlug(name: string) {
     slug = `${base}-${n++}`;
   }
   return slug;
+}
+
+export interface RepoOption extends UserRepo {
+  /** Already in the catalog, so it cannot be submitted again. */
+  alreadySubmitted: boolean;
+}
+
+/**
+ * The signed-in person's repositories, annotated with what is already listed.
+ *
+ * Typing a URL asks someone to fetch something they already have open in another
+ * tab. Their own repository list is the shortest path from "I built this" to a
+ * filled-in form, and it removes the whole class of typo and wrong-owner errors.
+ */
+export async function listMyRepositories(): Promise<
+  { ok: true; repos: RepoOption[] } | { ok: false; error: string }
+> {
+  try {
+    const user = await requireUser();
+    const token = await getUserGithubToken(user.id);
+    if (!token) {
+      return { ok: false, error: "Sign in with GitHub again to list your repositories" };
+    }
+
+    const repos = await listUserRepos(token);
+
+    const taken = new Set(
+      (await db.select({ repoUrl: projects.repoUrl }).from(projects)).map((r) =>
+        r.repoUrl.toLowerCase(),
+      ),
+    );
+
+    return {
+      ok: true,
+      repos: repos.map((r) => ({
+        ...r,
+        alreadySubmitted: taken.has(`https://github.com/${r.fullName}`.toLowerCase()),
+      })),
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg === "UNAUTHORIZED" ? "You need to sign in" : msg };
+  }
 }
 
 export async function currentUser() {

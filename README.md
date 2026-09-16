@@ -177,6 +177,13 @@ miss pre-fills the nomination form with what they typed. If the query matches a
 service that already has published alternatives, that is shown first — a working
 alternative is a better answer than the chance to ask for one.
 
+Publishing starts from **your own repository list**, not a URL field. Typing a
+URL asks someone to fetch something they already have open in another tab; the
+list fills in name, description and homepage from GitHub and removes the whole
+class of typo and wrong-owner mistakes. Repositories already in the catalog are
+shown greyed out rather than hidden, so it is obvious why one cannot be picked.
+Every field stays editable, and the manual URL field still works.
+
 `/submit?challenge=<slug>` publishes **and** enters the challenge in one step.
 Arriving from a challenge page means the intent was to compete; making someone
 publish, navigate back and submit again was a pointless extra step at exactly the
@@ -329,6 +336,24 @@ out of the index.
 Open Graph cards are generated per page from one shared template, using system
 fonts rather than a font fetch: an OG route that reaches a CDN on every render is
 a slow path that fails silently, and a missing preview is worse than a plain one.
+
+## The candidate slate
+
+`/wanted` ships with a starting slate of subscriptions worth replacing, loaded
+from `/admin`. The curation filter is **feasibility, not popularity**: can
+someone with Claude Code or Codex ship a version that genuinely replaces the paid
+product's core in a week? Each entry carries a concrete note on what a usable
+replacement needs, which becomes the challenge brief if it wins a vote.
+
+Four categories are deliberately excluded, with the reason kept in
+`src/lib/data/candidates.ts`: tools holding secrets, products whose value is a
+proprietary dataset, infrastructure with a reputation moat, and network-effect
+platforms. Saying no is the useful half of the list.
+
+Candidates seed with **zero votes and no author**. A candidate says "here is
+something to consider"; a seeded vote count would be fabricated demand, and
+demand is the one thing this site cannot invent without undermining its own
+headline number.
 
 ## Not built yet
 

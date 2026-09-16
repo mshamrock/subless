@@ -272,3 +272,61 @@ export async function fetchGithubUser(login: string, token?: string) {
   if (!res.ok) return null;
   return (await res.json()) as { id: number; created_at: string; login: string };
 }
+
+export interface UserRepo {
+  fullName: string;
+  name: string;
+  description: string | null;
+  homepage: string | null;
+  stars: number;
+  language: string | null;
+  pushedAt: string | null;
+  archived: boolean;
+  isFork: boolean;
+}
+
+/**
+ * The repositories someone can actually submit.
+ *
+ * Sorted by last push rather than by name or stars: the thing you just built is
+ * the thing you are here to publish, and it will be at the top. Forks and
+ * archived repos are kept but flagged, since a fork can be a legitimate
+ * alternative and hiding it would be presumptuous.
+ *
+ * The OAuth scope is public_repo, so private repositories never appear — which
+ * is correct, because the catalog cannot list what nobody can clone.
+ */
+export async function listUserRepos(userAccessToken: string): Promise<UserRepo[]> {
+  const res = await fetch(
+    `${API}/user/repos?sort=pushed&direction=desc&per_page=100&affiliation=owner,collaborator,organization_member`,
+    { headers: headers(userAccessToken), cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`GitHub API ${res.status} while listing repositories`);
+
+  const repos = (await res.json()) as {
+    full_name: string;
+    name: string;
+    description: string | null;
+    homepage: string | null;
+    stargazers_count: number;
+    language: string | null;
+    pushed_at: string | null;
+    archived: boolean;
+    fork: boolean;
+    private: boolean;
+  }[];
+
+  return repos
+    .filter((r) => !r.private)
+    .map((r) => ({
+      fullName: r.full_name,
+      name: r.name,
+      description: r.description,
+      homepage: r.homepage || null,
+      stars: r.stargazers_count ?? 0,
+      language: r.language,
+      pushedAt: r.pushed_at,
+      archived: Boolean(r.archived),
+      isFork: Boolean(r.fork),
+    }));
+}
