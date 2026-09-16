@@ -1,14 +1,14 @@
 import { ImageResponse } from "next/og";
 import { SWAN_DATA_URI } from "@/lib/og/swan";
 
-export const size = { width: 180, height: 180 };
+export const size = { width: 128, height: 128 };
 export const contentType = "image/png";
 
 /**
- * iOS rounds and masks home-screen icons itself, so this is full-bleed with
- * generous padding — a pre-rounded icon gets rounded twice and comes out pinched.
+ * The mark sits on a dark rounded tile rather than on transparency: browser tab
+ * strips are usually light, and lime on white is close to invisible at 16px.
  */
-export default function AppleIcon() {
+export default function Icon() {
   return new ImageResponse(
     (
       <div
@@ -19,10 +19,11 @@ export default function AppleIcon() {
           alignItems: "center",
           justifyContent: "center",
           background: "#0a0b0d",
+          borderRadius: 28,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={SWAN_DATA_URI} width={126} height={126} alt="" />
+        <img src={SWAN_DATA_URI} width={96} height={96} alt="" />
       </div>
     ),
     size,

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { BRAND } from "@/lib/brand";
+import { SWAN_DATA_URI } from "./swan";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -36,16 +37,8 @@ export function ogCard({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <svg width="44" height="44" viewBox="0 0 32 32">
-            <rect width="32" height="32" rx="7" fill="#c9f24d" />
-            <path
-              d="M 23.4 10.8 A 7.4 5.2 0 1 0 16 16 A 7.4 5.2 0 1 1 8.6 21.2"
-              fill="none"
-              stroke="#0a0b0d"
-              strokeWidth="4.6"
-              strokeLinecap="butt"
-            />
-          </svg>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={SWAN_DATA_URI} width={48} height={48} alt="" />
           <div style={{ color: "#8a919d", fontSize: 24, letterSpacing: 2 }}>
             {eyebrow.toUpperCase()}
           </div>
