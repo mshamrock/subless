@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   contests,
   cycleLog,
+  nominationVotes,
   nominations,
   projectMetrics,
   projects,
@@ -353,6 +354,69 @@ export async function moveInQueue(contestId: number, direction: -1 | 1): Promise
 }
 
 /* ────────────────────────────────  Admin reads  ──────────────────────────────── */
+
+/**
+ * Everything an admin manages, searchable.
+ *
+ * Paged rather than complete: there are well over a hundred nominations, and a
+ * moderation screen that renders all of them is slow to load and impossible to
+ * scan. Search narrows; the count tells you what you are not seeing.
+ */
+export async function getManagedContent(q = "") {
+  await requireAdmin();
+  const needle = q.trim() ? `%${q.trim()}%` : null;
+
+  const projectRows = await db
+    .select({
+      id: projects.id,
+      slug: projects.slug,
+      name: projects.name,
+      tagline: projects.tagline,
+      status: projects.status,
+      repoFullName: projects.repoFullName,
+      authorLogin: users.githubLogin,
+      stars: sql<number>`coalesce(${projectMetrics.stars}, 0)::int`,
+    })
+    .from(projects)
+    .leftJoin(users, eq(users.id, projects.submittedById))
+    .leftJoin(projectMetrics, eq(projectMetrics.projectId, projects.id))
+    .where(needle ? or(ilike(projects.name, needle), ilike(projects.tagline, needle)) : undefined)
+    .orderBy(asc(projects.status), desc(projects.createdAt))
+    .limit(60);
+
+  const nominationRows = await db
+    .select({
+      id: nominations.id,
+      targetName: nominations.targetName,
+      pitch: nominations.pitch,
+      status: nominations.status,
+      monthlyPriceUsd: nominations.monthlyPriceUsd,
+      authorLogin: users.githubLogin,
+      votes: sql<number>`count(${nominationVotes.userId})::int`,
+    })
+    .from(nominations)
+    .leftJoin(users, eq(users.id, nominations.submittedById))
+    .leftJoin(nominationVotes, eq(nominationVotes.nominationId, nominations.id))
+    .where(
+      needle
+        ? or(ilike(nominations.targetName, needle), ilike(nominations.pitch, needle))
+        : undefined,
+    )
+    .groupBy(nominations.id, users.id)
+    .orderBy(desc(sql`count(${nominationVotes.userId})`), asc(nominations.targetName))
+    .limit(60);
+
+  const [projectTotal] = await db.select({ n: sql<number>`count(*)::int` }).from(projects);
+  const [nominationTotal] = await db.select({ n: sql<number>`count(*)::int` }).from(nominations);
+
+  return {
+    projects: projectRows,
+    nominations: nominationRows,
+    projectTotal: projectTotal?.n ?? 0,
+    nominationTotal: nominationTotal?.n ?? 0,
+    query: q,
+  };
+}
 
 export async function getAdminData() {
   await requireAdmin();

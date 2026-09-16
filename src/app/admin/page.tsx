@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import { getAdminData } from "@/lib/actions/admin";
+import { getAdminData, getManagedContent } from "@/lib/actions/admin";
 import { getWeeklyState } from "@/lib/cycle";
 import { AdminPanel } from "@/components/admin-panel";
 
@@ -22,6 +22,10 @@ export default async function AdminPage() {
     );
   }
 
-  const [data, state] = await Promise.all([getAdminData(), getWeeklyState()]);
-  return <AdminPanel data={data} state={state} />;
+  const [data, state, managed] = await Promise.all([
+    getAdminData(),
+    getWeeklyState(),
+    getManagedContent(),
+  ]);
+  return <AdminPanel data={data} state={state} managed={managed} />;
 }

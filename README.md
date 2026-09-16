@@ -211,6 +211,26 @@ Settings shows name, avatar and email as read-only. They come from GitHub, and
 editable copies would invite people to change a name that silently resets on
 their next sign-in.
 
+## Moderation
+
+`/admin` manages both nominations and alternatives from one searchable list —
+searchable because there are well over a hundred nominations, and a screen that
+renders all of them is impossible to scan.
+
+**Hide is not reject.** Rejecting says "this does not belong here"; hiding says
+"not right now" — a broken build, a dead link, a repository gone private.
+Collapsing the two loses the reason, and the reason is what a moderator needs
+when they return to it a month later. Both drop out of every public query; only
+`approved` is ever listed.
+
+Deleting a build says out loud what goes with it — comments, challenge entries,
+upvotes, recorded switches — because a hard delete takes community work with it
+and hiding is almost always enough. Counting first costs a round trip and buys
+back the chance to change your mind while the data still exists.
+
+Admins can also add either directly. An admin-added nomination still starts at
+**zero votes**: an admin putting a candidate on the board is not demand either.
+
 ## Discussion and notifications
 
 Projects and contests carry comment threads. Threads are **one level deep** on

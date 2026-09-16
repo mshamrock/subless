@@ -26,6 +26,7 @@ import {
   syncMetricsNow,
 } from "@/lib/actions/admin";
 import { ActionMessage, SubmitButton } from "./form-status";
+import { ContentManager } from "./content-manager";
 import { TargetIcon } from "./target-icon";
 import { formatDate, formatMoney, timeLeft } from "@/lib/utils";
 import type { ActionResult } from "@/lib/actions/guard";
@@ -40,7 +41,17 @@ interface WeeklyState {
   finished?: { slug: string; title: string } | null;
 }
 
-export function AdminPanel({ data, state }: { data: AdminData; state: WeeklyState }) {
+type Managed = Awaited<ReturnType<typeof import("@/lib/actions/admin").getManagedContent>>;
+
+export function AdminPanel({
+  data,
+  state,
+  managed,
+}: {
+  data: AdminData;
+  state: WeeklyState;
+  managed: Managed;
+}) {
   const [message, setMessage] = useState<ActionResult | null>(null);
   const [pending, start] = useTransition();
 
@@ -145,6 +156,8 @@ export function AdminPanel({ data, state }: { data: AdminData; state: WeeklyStat
       </section>
 
       <NewContestForm targets={data.targetList} />
+
+      <ContentManager initial={managed} targets={data.targetList} />
 
       {/* Queue */}
       <section>

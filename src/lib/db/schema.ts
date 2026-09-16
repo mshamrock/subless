@@ -112,7 +112,13 @@ export const targets = pgTable(
   (t) => [index("targets_category_idx").on(t.categoryId)],
 );
 
-export const projectStatus = ["pending", "approved", "rejected"] as const;
+/**
+ * `hidden` is distinct from `rejected` on purpose. Rejecting says "this does not
+ * belong here"; hiding says "not right now" — a broken build, a dead link, a
+ * repository gone private. Collapsing them loses the reason, and the reason is
+ * what a moderator needs when they come back to it a month later.
+ */
+export const projectStatus = ["pending", "approved", "hidden", "rejected"] as const;
 export type ProjectStatus = (typeof projectStatus)[number];
 
 /** An alternative — the thing a participant actually built */
@@ -302,7 +308,7 @@ export const contestVotes = pgTable(
 
 /* ────────────────────────────────  Nominations: what to clone next  ──────────────────────────────── */
 
-export const nominationStatus = ["pending", "approved", "rejected", "promoted"] as const;
+export const nominationStatus = ["pending", "approved", "hidden", "rejected", "promoted"] as const;
 export type NominationStatus = (typeof nominationStatus)[number];
 
 export const nominations = pgTable(
