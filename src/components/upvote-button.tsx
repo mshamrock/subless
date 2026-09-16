@@ -4,6 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { ChevronUp } from "lucide-react";
 import { toggleUpvote } from "@/lib/actions/projects";
 import { cn } from "@/lib/utils";
+import { useAuthPrompt } from "./auth-prompt";
 
 export function UpvoteButton({
   projectId,
@@ -16,6 +17,7 @@ export function UpvoteButton({
   active: boolean;
   signedIn: boolean;
 }) {
+  const { requireAuth } = useAuthPrompt();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [state, setOptimistic] = useOptimistic(
@@ -29,14 +31,15 @@ export function UpvoteButton({
         type="button"
         disabled={pending}
         title={signedIn ? undefined : "Sign in with GitHub"}
-        onClick={() =>
+        onClick={() => {
+          if (!requireAuth("upvote this build")) return;
           start(async () => {
             setError(null);
             setOptimistic(null);
             const res = await toggleUpvote(projectId);
             if (!res.ok) setError(res.error);
-          })
-        }
+          });
+        }}
         className={cn(
           "flex w-12 flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 transition-colors",
           state.active

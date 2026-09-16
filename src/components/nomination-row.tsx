@@ -5,6 +5,7 @@ import { ChevronUp, ExternalLink } from "lucide-react";
 import { toggleNominationVote } from "@/lib/actions/nominations";
 import { TargetIcon } from "./target-icon";
 import { cn, formatYearly, plural } from "@/lib/utils";
+import { useAuthPrompt } from "./auth-prompt";
 
 export interface NominationData {
   id: number;
@@ -30,6 +31,7 @@ export function NominationRow({
   rank?: number;
   compact?: boolean;
 }) {
+  const { requireAuth } = useAuthPrompt();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [state, setOptimistic] = useOptimistic(
@@ -48,14 +50,15 @@ export function NominationRow({
       <button
         type="button"
         disabled={pending}
-        onClick={() =>
+        onClick={() => {
+          if (!requireAuth(`vote for replacing ${nomination.targetName}`)) return;
           start(async () => {
             setError(null);
             setOptimistic(null);
             const res = await toggleNominationVote(nomination.id);
             if (!res.ok) setError(res.error);
-          })
-        }
+          });
+        }}
         className={cn(
           "flex w-14 shrink-0 flex-col items-center gap-0.5 rounded-lg border px-2 py-1.5 transition-colors",
           state.voted

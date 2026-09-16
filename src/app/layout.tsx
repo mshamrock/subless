@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { BRAND } from "@/lib/brand";
+import { auth } from "@/lib/auth";
+import { AuthPromptProvider } from "@/components/auth-prompt";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -22,13 +24,19 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: BRAND.name, description: BRAND.short },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read once here rather than threading a `signedIn` prop through every page
+  // into every button that happens to need an account
+  const session = await auth();
+
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <SiteHeader />
-        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
-        <SiteFooter />
+        <AuthPromptProvider signedIn={Boolean(session?.user)}>
+          <SiteHeader />
+          <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+          <SiteFooter />
+        </AuthPromptProvider>
       </body>
     </html>
   );

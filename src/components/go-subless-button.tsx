@@ -4,6 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { Check, Scissors } from "lucide-react";
 import { toggleSwitch } from "@/lib/actions/switches";
 import { cn, formatYearly } from "@/lib/utils";
+import { useAuthPrompt } from "./auth-prompt";
 
 /**
  * The moment the whole product builds toward: someone confirms they stopped
@@ -27,6 +28,7 @@ export function GoSublessButton({
   signedIn: boolean;
   size?: "default" | "compact";
 }) {
+  const { requireAuth } = useAuthPrompt();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [state, setOptimistic] = useOptimistic(active, (prev) => !prev);
@@ -37,14 +39,15 @@ export function GoSublessButton({
         type="button"
         disabled={pending}
         title={signedIn ? undefined : "Sign in with GitHub"}
-        onClick={() =>
+        onClick={() => {
+          if (!requireAuth(`record that you went Subless on ${targetName}`)) return;
           start(async () => {
             setError(null);
             setOptimistic(null);
             const res = await toggleSwitch(targetId, projectId);
             if (!res.ok) setError(res.error);
-          })
-        }
+          });
+        }}
         className={cn(
           "inline-flex items-center gap-2 rounded-lg font-medium transition-colors",
           size === "compact" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm",

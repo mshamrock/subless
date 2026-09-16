@@ -4,18 +4,16 @@ import { getComments } from "@/lib/queries";
 import type { CommentSubject } from "@/lib/db/schema";
 import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
-import { SignInButton } from "./auth-buttons";
+import { CommentSignIn } from "./comment-sign-in";
 import { plural } from "@/lib/utils";
 
 export async function CommentThread({
   subjectType,
   subjectId,
-  returnTo,
   prompt = "Add a comment",
 }: {
   subjectType: CommentSubject;
   subjectId: number;
-  returnTo: string;
   prompt?: string;
 }) {
   const [session, thread] = await Promise.all([
@@ -36,12 +34,7 @@ export async function CommentThread({
       {user ? (
         <CommentForm subjectType={subjectType} subjectId={subjectId} placeholder={prompt} />
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-          <p className="text-sm text-[var(--color-muted)]">
-            Sign in with GitHub to join the discussion.
-          </p>
-          <SignInButton redirectTo={returnTo} />
-        </div>
+        <CommentSignIn placeholder={prompt} />
       )}
 
       {thread.length > 0 && (

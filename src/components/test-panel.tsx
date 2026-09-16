@@ -5,6 +5,7 @@ import { Check, ClipboardCheck, Minus, X } from "lucide-react";
 import { submitTestReport } from "@/lib/actions/testing";
 import { Avatar } from "./avatar";
 import { cn, formatDate, plural } from "@/lib/utils";
+import { useAuthPrompt } from "./auth-prompt";
 import type { TestSummary } from "@/lib/queries";
 
 export function TestPanel({
@@ -24,6 +25,7 @@ export function TestPanel({
   isOwn: boolean;
   signedIn: boolean;
 }) {
+  const { requireAuth } = useAuthPrompt();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -71,10 +73,18 @@ export function TestPanel({
           </span>
         )}
 
-        {signedIn && !isOwn && (
+        {/* Offered signed out too: the invitation is the point, and the dialog
+            asks for the account at the moment it is actually needed */}
+        {!isOwn && (
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              if (!signedIn) {
+                requireAuth("report what this build does");
+                return;
+              }
+              setOpen((v) => !v);
+            }}
             className="mono ml-auto text-xs text-[var(--color-muted)] hover:text-[var(--color-fg)]"
           >
             {open ? "close" : mine ? "edit your report" : "test this build"}

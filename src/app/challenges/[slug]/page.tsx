@@ -295,7 +295,7 @@ export default async function ContestPage({
                   entry={entry}
                   contestId={contest.id}
                   votedEntryId={userVote}
-                  canVote={votingOpen && Boolean(userId)}
+                  canVote={votingOpen}
                   isOwn={isOwn}
                   showResult={showResults}
                   highlighted={sharedEntryId === entry.entryId}
@@ -335,7 +335,6 @@ export default async function ContestPage({
       <CommentThread
         subjectType="contest"
         subjectId={contest.id}
-        returnTo={`/challenges/${contest.slug}`}
         prompt="Questions about the requirements, or feedback on the builds"
       />
     </div>

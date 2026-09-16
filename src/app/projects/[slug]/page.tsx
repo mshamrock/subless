@@ -313,7 +313,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           <CommentThread
             subjectType="project"
             subjectId={project.id}
-            returnTo={`/projects/${project.slug}`}
             prompt="Does it actually replace the paid one? What is still missing?"
           />
         </div>

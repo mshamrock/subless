@@ -5,6 +5,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { Check, Github, Star, Trophy } from "lucide-react";
 import { voteForEntry } from "@/lib/actions/contests";
 import { cn, formatNumber, plural } from "@/lib/utils";
+import { useAuthPrompt } from "./auth-prompt";
 import { Avatar } from "./avatar";
 import { TryButton } from "./try-button";
 
@@ -41,6 +42,8 @@ export function EntryVoteCard({
   entry: EntryCardData;
   contestId: number;
   votedEntryId: number | null;
+  /** Whether the contest is in its voting week — not whether anyone is signed
+      in, which the dialog handles at the moment of the click. */
   canVote: boolean;
   isOwn: boolean;
   showResult?: boolean;
@@ -51,6 +54,7 @@ export function EntryVoteCard({
   /** The share control, shown to whoever entered this build. */
   share?: React.ReactNode;
 }) {
+  const { requireAuth } = useAuthPrompt();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const voted = votedEntryId === entry.entryId;
@@ -169,14 +173,15 @@ export function EntryVoteCard({
                   ? undefined
                   : "Voting is closed right now"
             }
-            onClick={() =>
+            onClick={() => {
+              if (!requireAuth(`vote for ${entry.name}`)) return;
               start(async () => {
                 setError(null);
                 setOptimistic(null);
                 const res = await voteForEntry(contestId, entry.entryId);
                 if (!res.ok) setError(res.error);
-              })
-            }
+              });
+            }}
             className={cn(
               "flex min-w-[88px] items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
               state.voted
