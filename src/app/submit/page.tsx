@@ -34,6 +34,7 @@ export default async function SubmitPage({
   const openChallenge =
     challenge && challenge.status === "building" ? challenge : null;
   const thisWeek = weekly.building ?? null;
+  const topWanted = nominations.find((n) => n.votes > 0) ?? null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -84,6 +85,7 @@ export default async function SubmitPage({
           </p>
         </div>
       ) : (
+        (thisWeek || topWanted) && (
         <div className="grid gap-3 sm:grid-cols-2">
           {thisWeek && (
             <Link href={`/submit?challenge=${thisWeek.slug}`} className="card card-hover p-4">
@@ -97,26 +99,30 @@ export default async function SubmitPage({
             </Link>
           )}
 
-          {nominations.length > 0 && (
+          {/* Only worth showing once someone has actually voted. A candidate with
+              zero votes presented as "most wanted" reads as a bug, because it is
+              one — the ordering just falls back to insertion order. */}
+          {topWanted && (
             <Link href="/wanted" className="card card-hover p-4">
               <p className="eyebrow mb-2 flex items-center gap-2">
                 <TrendingUp size={13} /> Most wanted
               </p>
               <p className="text-sm font-semibold">
-                {nominations[0].targetName}
-                {nominations[0].monthlyPriceUsd != null && (
+                {topWanted.targetName}
+                {topWanted.monthlyPriceUsd != null && (
                   <span className="mono ml-2 text-xs text-[var(--color-acid)]">
-                    {formatYearly(nominations[0].monthlyPriceUsd)}
+                    {formatYearly(topWanted.monthlyPriceUsd)}
                   </span>
                 )}
               </p>
               <p className="mono mt-1 text-xs text-[var(--color-muted)]">
-                {nominations[0].votes}{" "}
-                {plural(nominations[0].votes, "person wants", "people want")} it replaced
+                {topWanted.votes} {plural(topWanted.votes, "person wants", "people want")} it
+                replaced
               </p>
             </Link>
           )}
         </div>
+        )
       )}
 
       {session?.user ? (
