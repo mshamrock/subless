@@ -386,6 +386,32 @@ yet, since those pages collect demand rather than traffic — plus builds and
 challenges. `robots.ts` keeps `/admin`, `/savings`, `/notifications` and `/api`
 out of the index.
 
+`/alternatives` is the hub those pages hang off. Before it existed the only
+internal links to a service page were a handful of chips on `/catalog`, so most
+of them appeared in the sitemap and nowhere else — and a page nothing links to is
+one search engines treat as unimportant and people cannot browse to. It is not
+`/catalog` renamed: the catalog lists the builds, this lists the subscriptions,
+and a service with nothing built for it is still shown, as demand. Which is the
+thing a directory has no way to express.
+
+## The feed
+
+`/feed.xml` is the weekly heartbeat for anyone who will not make an account.
+A newsletter or aggregator takes a feed; it does not take a sign-up, and the
+digest only reaches people who already signed in — so this is the one channel
+that costs nothing to run and nothing for the other side to adopt.
+
+Items are **moments, not challenges**. A challenge lives three weeks and changes
+twice while it does, so one item per challenge would announce it once and then
+silently rewrite itself: a subscriber would never hear that voting opened or that
+a winner launched. Three items with stable guids (`#building`, `#voting`,
+`#finished`) reproduce what the cycle actually promises — two things every week,
+and a reader sees both.
+
+Each moment is gated on the status as well as the clock. The tick runs weekly, so
+a date passing is not the same as the phase having turned, and announcing voting
+on a challenge still in build week would be a lie told automatically.
+
 Open Graph cards are generated per page from one shared template, using system
 fonts rather than a font fetch: an OG route that reaches a CDN on every render is
 a slow path that fails silently, and a missing preview is worse than a plain one.

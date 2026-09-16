@@ -58,7 +58,15 @@ export default async function CatalogPage({
 
       {covered.length > 0 && (
         <section>
-          <h2 className="eyebrow mb-3">You can go Subless on these</h2>
+          <div className="mb-3 flex items-baseline justify-between gap-4">
+            <h2 className="eyebrow">You can go Subless on these</h2>
+            <Link
+              href="/alternatives"
+              className="mono text-xs text-[var(--color-faint)] hover:text-[var(--color-fg)]"
+            >
+              all {targets.length} subscriptions →
+            </Link>
+          </div>
           <div className="flex flex-wrap gap-2">
             {covered.slice(0, 24).map((t) => (
               <Link key={t.id} href={`/alternatives/${t.slug}`} className="chip card-hover">

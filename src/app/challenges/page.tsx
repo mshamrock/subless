@@ -5,7 +5,7 @@ import { getWeeklyState } from "@/lib/cycle";
 import { PhaseTimeline } from "@/components/phase-timeline";
 import { EmptyState } from "@/components/empty-state";
 import { TargetIcon } from "@/components/target-icon";
-import { Hammer } from "lucide-react";
+import { Hammer, Rss } from "lucide-react";
 import { formatDate, timeLeft } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -34,6 +34,12 @@ export default async function ContestsPage() {
           Challenges are the heartbeat. Each runs three weeks — build, vote, launch — but
           the phases overlap, so something happens every single week.
         </p>
+        <a
+          href="/feed.xml"
+          className="mono mt-4 inline-flex items-center gap-1.5 text-xs text-[var(--color-faint)] hover:text-[var(--color-fg)]"
+        >
+          <Rss size={12} /> follow by RSS — no account, no email
+        </a>
       </header>
 
       {state.building && (

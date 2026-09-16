@@ -346,6 +346,31 @@ export async function getTargetDemand(targetId: number): Promise<number> {
   return row?.n ?? 0;
 }
 
+/**
+ * Demand for every service at once, keyed by target id.
+ *
+ * Deliberately not folded into getTargetsWithCounts: that query already joins
+ * projects, and adding the nomination-vote join to it fans the rows out so both
+ * counts come back multiplied. Two queries merged in memory are obviously
+ * correct; one wide join is quietly wrong.
+ */
+export async function getTargetDemandMap(): Promise<Map<number, number>> {
+  const rows = await db
+    .select({
+      targetId: nominations.targetId,
+      votes: sql<number>`count(${nominationVotes.userId})::int`,
+    })
+    .from(nominations)
+    .leftJoin(nominationVotes, eq(nominationVotes.nominationId, nominations.id))
+    .groupBy(nominations.targetId);
+
+  const map = new Map<number, number>();
+  for (const row of rows) {
+    if (row.targetId != null) map.set(row.targetId, row.votes);
+  }
+  return map;
+}
+
 export async function getCategoriesWithCounts() {
   return db
     .select({
@@ -488,6 +513,43 @@ export async function getContestList() {
     .leftJoin(targets, eq(targets.id, contests.targetId))
     .leftJoin(contestEntries, eq(contestEntries.contestId, contests.id))
     .groupBy(contests.id, targets.id)
+    .orderBy(desc(contests.createdAt));
+}
+
+/**
+ * Every challenge with the three moments the feed reports — build week opening,
+ * voting opening, the winner launching — and the winner itself.
+ *
+ * The timestamps come back raw rather than resolved into events here, because
+ * whether a moment has actually happened depends on the status as well as the
+ * clock: the tick runs weekly, so a date passing is not the same as the phase
+ * having turned.
+ */
+export async function getFeedContests() {
+  return db
+    .select({
+      id: contests.id,
+      slug: contests.slug,
+      title: contests.title,
+      status: contests.status,
+      brief: contests.brief,
+      requirements: contests.requirements,
+      buildingStartsAt: contests.buildingStartsAt,
+      votingStartsAt: contests.votingStartsAt,
+      endsAt: contests.endsAt,
+      targetName: targets.name,
+      targetSlug: targets.slug,
+      targetMonthlyPriceUsd: targets.monthlyPriceUsd,
+      winnerSlug: projects.slug,
+      winnerName: projects.name,
+      winnerTagline: projects.tagline,
+      entryCount: sql<number>`count(distinct ${contestEntries.id})::int`,
+    })
+    .from(contests)
+    .leftJoin(targets, eq(targets.id, contests.targetId))
+    .leftJoin(projects, eq(projects.id, contests.winnerProjectId))
+    .leftJoin(contestEntries, eq(contestEntries.contestId, contests.id))
+    .groupBy(contests.id, targets.id, projects.id)
     .orderBy(desc(contests.createdAt));
 }
 

@@ -13,6 +13,11 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND.name}`,
   },
   description: BRAND.sentence,
+  alternates: {
+    types: {
+      "application/rss+xml": [{ url: `${BRAND.url}/feed.xml`, title: `${BRAND.name} challenges` }],
+    },
+  },
   openGraph: {
     type: "website",
     siteName: BRAND.name,

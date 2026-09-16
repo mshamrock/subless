@@ -16,11 +16,13 @@ export function SiteFooter() {
             <Link href="/wanted" className="hover:text-[var(--color-fg)]">Most wanted</Link>
             <Link href="/challenges" className="hover:text-[var(--color-fg)]">Challenges</Link>
             <Link href="/catalog" className="hover:text-[var(--color-fg)]">Alternatives</Link>
+            <Link href="/alternatives" className="hover:text-[var(--color-fg)]">Subscriptions</Link>
             <Link href="/leaderboard" className="hover:text-[var(--color-fg)]">Builders</Link>
             <Link href="/submit" className="hover:text-[var(--color-fg)]">Publish a build</Link>
             <Link href="/savings" className="hover:text-[var(--color-fg)]">Your savings</Link>
             <Link href="/settings" className="hover:text-[var(--color-fg)]">Settings</Link>
             <Link href="/how-it-works" className="hover:text-[var(--color-fg)]">How it works</Link>
+            <a href="/feed.xml" className="hover:text-[var(--color-fg)]">RSS</a>
           </div>
         </div>
 

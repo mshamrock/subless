@@ -55,7 +55,7 @@ export default async function AlternativesPage({
   return (
     <div className="space-y-8">
       <nav className="mono text-xs text-[var(--color-faint)]">
-        <Link href="/catalog" className="hover:text-[var(--color-fg)]">alternatives</Link>
+        <Link href="/alternatives" className="hover:text-[var(--color-fg)]">alternatives</Link>
         <span className="mx-2">/</span>
         <span>{target.name}</span>
       </nav>
