@@ -36,6 +36,13 @@
       "when": 1789558757526,
       "tag": "0004_new_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789571105029,
+      "tag": "0005_classy_ego",
+      "breakpoints": true
     }
   ]
 }

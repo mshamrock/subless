@@ -15,6 +15,7 @@ import {
 import { auth } from "@/lib/auth";
 import {
   getAuthorSummary,
+  getGithubDetails,
   getProjectBySlug,
   getUserSwitchedTargets,
   hasUpvoted,
@@ -28,6 +29,7 @@ import { Avatar } from "@/components/avatar";
 import { TryButton } from "@/components/try-button";
 import { GoSublessButton } from "@/components/go-subless-button";
 import { BadgeRow } from "@/components/badge-row";
+import { RepoInsights } from "@/components/repo-insights";
 import { CommentThread } from "@/components/comment-thread";
 import { formatDate, formatMoneyCompact, formatNumber, formatYearly, prettyHost } from "@/lib/utils";
 
@@ -52,12 +54,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const userId = session?.user?.id;
   const host = prettyHost(project.homepageUrl);
 
-  const [upvoted, author, mySwitches] = await Promise.all([
+  const [upvoted, author, mySwitches, details] = await Promise.all([
     userId ? hasUpvoted(project.id, userId) : Promise.resolve(false),
     project.submittedById
       ? getAuthorSummary(project.submittedById)
       : Promise.resolve(null),
     userId ? getUserSwitchedTargets(userId) : Promise.resolve(new Set<number>()),
+    getGithubDetails(project.id),
   ]);
 
   // Offer the switch for the one subscription this build replaces; with several
@@ -217,6 +220,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 {project.description}
               </p>
             </section>
+          )}
+
+          {details && (
+            <RepoInsights details={details} repoFullName={project.repoFullName} />
           )}
 
           <section className="card p-6">

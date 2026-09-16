@@ -5,6 +5,7 @@ import {
   timestamp,
   boolean,
   real,
+  jsonb,
   primaryKey,
   uniqueIndex,
   index,
@@ -225,6 +226,55 @@ export const projectUpvotes = pgTable(
   },
   (t) => [primaryKey({ columns: [t.projectId, t.userId] })],
 );
+
+/**
+ * Richer repository facts, refreshed alongside the metrics.
+ *
+ * Separate from `project_metrics` because these are shapes, not numbers: lists
+ * and nested objects that nothing sorts or filters by. Putting them in jsonb
+ * keeps the metrics table narrow and scannable, and lets the shape evolve
+ * without a migration every time GitHub exposes something new.
+ */
+export const githubDetails = pgTable("github_details", {
+  projectId: integer("project_id")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+
+  /** Can someone actually run this instead of paying? The decisive question. */
+  selfHost: jsonb("self_host").$type<{
+    dockerfile: boolean;
+    compose: boolean;
+    helm: boolean;
+    envExample: boolean;
+    /** One-click deploy targets found in the README, e.g. "Railway", "Render". */
+    deployButtons: string[];
+  }>(),
+
+  /** Commits per week for the last year, oldest first. Empty when GitHub is still computing. */
+  commitWeeks: jsonb("commit_weeks").$type<number[]>(),
+
+  release: jsonb("release").$type<{
+    tag: string;
+    name: string | null;
+    publishedAt: string | null;
+    url: string;
+    downloads: number;
+    assets: number;
+  } | null>(),
+
+  /** Top contributors, most commits first. Short list — this is a risk signal, not a credits roll. */
+  contributors: jsonb("contributors").$type<
+    { login: string; avatar: string | null; commits: number }[]
+  >(),
+  /** Share of commits by the single busiest contributor, 0–1. The bus factor in one number. */
+  topContributorShare: real("top_contributor_share"),
+
+  goodFirstIssues: jsonb("good_first_issues").$type<
+    { number: number; title: string; url: string; comments: number }[]
+  >(),
+
+  fetchedAt: timestamp("fetched_at", { mode: "date" }).notNull().defaultNow(),
+});
 
 /* ────────────────────────────────  Weekly contests  ──────────────────────────────── */
 

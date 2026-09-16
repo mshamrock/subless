@@ -1,7 +1,13 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { githubStats, projectMetrics, projectUpvotes, projects } from "@/lib/db/schema";
-import { fetchRepoSnapshot } from "@/lib/github";
+import {
+  githubDetails,
+  githubStats,
+  projectMetrics,
+  projectUpvotes,
+  projects,
+} from "@/lib/db/schema";
+import { fetchRepoDetails, fetchRepoSnapshot } from "@/lib/github";
 import { computeScore } from "@/lib/score";
 
 /**
@@ -78,6 +84,30 @@ export async function syncProject(projectId: number): Promise<{ ok: boolean; err
 
     if (Object.keys(backfill).length) {
       await db.update(projects).set(backfill).where(eq(projects.id, projectId));
+    }
+
+    /**
+     * Insights are a separate, best-effort pass. They cost several extra calls
+     * and nothing downstream sorts by them, so a failure here must not mark the
+     * whole project as unsynced — the numbers people rank by are already saved.
+     */
+    try {
+      const details = await fetchRepoDetails(project.repoFullName);
+      const detailRow = {
+        selfHost: details.selfHost,
+        commitWeeks: details.commitWeeks,
+        release: details.release,
+        contributors: details.contributors,
+        topContributorShare: details.topContributorShare,
+        goodFirstIssues: details.goodFirstIssues,
+        fetchedAt: new Date(),
+      };
+      await db
+        .insert(githubDetails)
+        .values({ projectId, ...detailRow })
+        .onConflictDoUpdate({ target: githubDetails.projectId, set: detailRow });
+    } catch {
+      // Keep whatever was stored last time rather than blanking the section
     }
 
     return { ok: true };

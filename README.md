@@ -231,6 +231,39 @@ back the chance to change your mind while the data still exists.
 Admins can also add either directly. An admin-added nomination still starts at
 **zero votes**: an admin putting a candidate on the board is not demand either.
 
+## What the repository says
+
+Every project page carries five things read from GitHub, chosen to answer one
+question — *can I stop paying for the thing this replaces?*
+
+**Self-hosting readiness.** Dockerfile, compose file, Helm chart, `.env` example,
+and one-click deploy targets found in the README. A repository with
+`docker compose up` and one that needs three services wired by hand are different
+products to someone cancelling a subscription, and no other catalog shows the
+difference.
+
+**A year of commit activity.** A sparkline, because the score's liveness
+multiplier should be visible rather than asserted: one commit yesterday on a dead
+project and a steady year are identical as a date and obviously different as a
+shape.
+
+**Latest release.** Tag, date and downloadable assets — is it still shipping, and
+do I build it or just download it?
+
+**Who maintains it.** Contributors with the busiest one's share of commits.
+"801 contributors" hides the case where one person wrote nearly all of it, which
+is the risk that matters when you are about to depend on this instead of a paid
+product. Above 80% the page says so out loud. Bots are excluded: Dependabot can
+out-commit every human in a busy repository, which would skew the number in the
+reassuring direction — the wrong way for a risk signal to be wrong.
+
+**Good first issues.** The one block not about deciding. It is about joining in.
+
+Each piece degrades on its own: no releases, no README, or statistics GitHub has
+not finished computing still leaves the rest. Insights are fetched in a
+best-effort pass after the metrics, so a failure there never marks a project
+unsynced — the numbers people rank by are already saved.
+
 ## Discussion and notifications
 
 Projects and contests carry comment threads. Threads are **one level deep** on

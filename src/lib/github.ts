@@ -330,3 +330,142 @@ export async function listUserRepos(userAccessToken: string): Promise<UserRepo[]
       isFork: Boolean(r.fork),
     }));
 }
+
+/* ────────────────────────────  Repository insights  ──────────────────────────── */
+
+export interface SelfHostSignals {
+  dockerfile: boolean;
+  compose: boolean;
+  helm: boolean;
+  envExample: boolean;
+  deployButtons: string[];
+}
+
+export interface RepoDetails {
+  selfHost: SelfHostSignals;
+  commitWeeks: number[];
+  release: {
+    tag: string;
+    name: string | null;
+    publishedAt: string | null;
+    url: string;
+    downloads: number;
+    assets: number;
+  } | null;
+  contributors: { login: string; avatar: string | null; commits: number }[];
+  topContributorShare: number | null;
+  goodFirstIssues: { number: number; title: string; url: string; comments: number }[];
+}
+
+/** One-click deploy targets, matched against README markup. */
+const DEPLOY_TARGETS: [RegExp, string][] = [
+  [/railway\.app\/new|railway\.com\/new/i, "Railway"],
+  [/render\.com\/deploy/i, "Render"],
+  [/heroku\.com\/deploy/i, "Heroku"],
+  [/vercel\.com\/new\/clone/i, "Vercel"],
+  [/app\.netlify\.com\/start\/deploy/i, "Netlify"],
+  [/fly\.io\/docs\/launch|flyctl launch/i, "Fly.io"],
+  [/deploy\.cloud\.run/i, "Cloud Run"],
+  [/digitalocean\.com\/apps\/new/i, "DigitalOcean"],
+  [/coolify/i, "Coolify"],
+  [/marketplace\.digitalocean|1-click/i, "One-click"],
+];
+
+async function json<T>(url: string, token?: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, { headers: headers(token), cache: "no-store" });
+    // 202 means GitHub is still computing the statistic; empty is the honest answer
+    if (res.status === 202 || !res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Everything the project page shows beyond raw counts.
+ *
+ * Each piece degrades independently: a repository with no releases, no README or
+ * statistics GitHub has not finished computing still returns the rest. A partial
+ * answer is worth far more here than an exception.
+ */
+export async function fetchRepoDetails(
+  fullName: string,
+  token?: string,
+): Promise<RepoDetails> {
+  const [contents, weeks, release, contributors, issues, readme] = await Promise.all([
+    json<{ name: string; type: string }[]>(`${API}/repos/${fullName}/contents`, token),
+    json<{ total: number }[]>(`${API}/repos/${fullName}/stats/commit_activity`, token),
+    json<{
+      tag_name: string;
+      name: string | null;
+      published_at: string | null;
+      html_url: string;
+      assets?: { download_count?: number }[];
+    }>(`${API}/repos/${fullName}/releases/latest`, token),
+    json<{ login: string; avatar_url: string; contributions: number; type?: string }[]>(
+      `${API}/repos/${fullName}/contributors?per_page=30`,
+      token,
+    ),
+    json<{ number: number; title: string; html_url: string; comments: number; pull_request?: unknown }[]>(
+      `${API}/repos/${fullName}/issues?state=open&labels=${encodeURIComponent("good first issue")}&per_page=5`,
+      token,
+    ),
+    json<{ content?: string }>(`${API}/repos/${fullName}/readme`, token),
+  ]);
+
+  const names = (contents ?? []).map((f) => f.name.toLowerCase());
+  const readmeText = readme?.content
+    ? Buffer.from(readme.content, "base64").toString("utf8")
+    : "";
+
+  const selfHost: SelfHostSignals = {
+    dockerfile: names.some((n) => n === "dockerfile" || n.startsWith("dockerfile.")),
+    compose: names.some((n) => /^(docker-)?compose(\.\w+)*\.ya?ml$/.test(n)),
+    helm: names.some((n) => n === "chart.yaml" || n === "helm" || n === "charts"),
+    envExample: names.some((n) => n.startsWith(".env.") || n === "env.example"),
+    deployButtons: DEPLOY_TARGETS.filter(([re]) => re.test(readmeText)).map(([, label]) => label),
+  };
+
+  /**
+   * Bots are not maintainers. Dependabot can out-commit every human in a busy
+   * repository, which pads the list and skews the bus factor in the reassuring
+   * direction — exactly the wrong way for a risk signal to be wrong.
+   */
+  const humans = (contributors ?? []).filter(
+    (c) => c.type !== "Bot" && !/\[bot\]$/i.test(c.login),
+  );
+
+  const totalCommits = humans.reduce((sum, c) => sum + c.contributions, 0);
+  const top = humans[0];
+
+  return {
+    selfHost,
+    // GitHub returns newest last, which is the order a sparkline wants
+    commitWeeks: (weeks ?? []).map((w) => w.total),
+    release: release
+      ? {
+          tag: release.tag_name,
+          name: release.name,
+          publishedAt: release.published_at,
+          url: release.html_url,
+          downloads: (release.assets ?? []).reduce(
+            (sum, a) => sum + (a.download_count ?? 0),
+            0,
+          ),
+          assets: (release.assets ?? []).length,
+        }
+      : null,
+    contributors: humans.slice(0, 6).map((c) => ({
+      login: c.login,
+      avatar: c.avatar_url ?? null,
+      commits: c.contributions,
+    })),
+    topContributorShare:
+      top && totalCommits > 0 ? Math.round((top.contributions / totalCommits) * 100) / 100 : null,
+    // The issues endpoint returns pull requests too; they are not tasks to pick up
+    goodFirstIssues: (issues ?? [])
+      .filter((i) => !i.pull_request)
+      .map((i) => ({ number: i.number, title: i.title, url: i.html_url, comments: i.comments })),
+  };
+}

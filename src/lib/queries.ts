@@ -7,6 +7,7 @@ import {
   contestEntries,
   contestVotes,
   contests,
+  githubDetails,
   nominationVotes,
   nominations,
   projectMetrics,
@@ -940,4 +941,14 @@ export async function getNominationCategories() {
     .orderBy(desc(sql`count(distinct ${nominations.id})`), asc(categories.name));
 
   return rows;
+}
+
+/** Repository insights for the project page. Absent until the first sync runs. */
+export async function getGithubDetails(projectId: number) {
+  const [row] = await db
+    .select()
+    .from(githubDetails)
+    .where(eq(githubDetails.projectId, projectId))
+    .limit(1);
+  return row ?? null;
 }
