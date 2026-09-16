@@ -24,7 +24,9 @@ export async function GET(
     projectName: entry.projectName,
     targetName: entry.targetName,
     yearly: entry.targetPrice != null ? formatYearly(entry.targetPrice) : null,
-    monthly: entry.targetPrice != null ? formatMoney(entry.targetPrice) : null,
+    // Rounded: the card is a poster, and "$6.91/mo" spends a reader's attention
+    // on two digits that change nothing about the decision
+    monthly: entry.targetPrice != null ? formatMoney(Math.round(entry.targetPrice)) : null,
     authorLogin: entry.authorLogin,
   });
 }
