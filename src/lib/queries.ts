@@ -429,6 +429,37 @@ export async function getContestEntries(contestId: number) {
   return rows;
 }
 
+/**
+ * Everything a shared entry needs to describe itself: the build, who made it,
+ * and the subscription it stands in for.
+ *
+ * Shared links are read by strangers and by crawlers, so this deliberately
+ * takes only the entry id — the caller has nothing else at that point.
+ */
+export async function getEntryShareCard(entryId: number) {
+  const [row] = await db
+    .select({
+      entryId: contestEntries.id,
+      projectName: projects.name,
+      projectSlug: projects.slug,
+      tagline: projects.tagline,
+      authorLogin: users.githubLogin,
+      contestSlug: contests.slug,
+      contestTitle: contests.title,
+      contestStatus: contests.status,
+      targetName: targets.name,
+      targetPrice: targets.monthlyPriceUsd,
+    })
+    .from(contestEntries)
+    .innerJoin(projects, eq(projects.id, contestEntries.projectId))
+    .innerJoin(contests, eq(contests.id, contestEntries.contestId))
+    .leftJoin(users, eq(users.id, contestEntries.userId))
+    .leftJoin(targets, eq(targets.id, contests.targetId))
+    .where(eq(contestEntries.id, entryId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getUserVote(contestId: number, userId: string) {
   const [row] = await db
     .select({ entryId: contestVotes.entryId })

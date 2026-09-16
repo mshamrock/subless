@@ -35,6 +35,8 @@ export function EntryVoteCard({
   isOwn,
   showResult = false,
   footer,
+  highlighted = false,
+  share,
 }: {
   entry: EntryCardData;
   contestId: number;
@@ -44,6 +46,10 @@ export function EntryVoteCard({
   showResult?: boolean;
   /** Rendered full width under the card — the testing checklist lives here. */
   footer?: React.ReactNode;
+  /** This is the entry the incoming shared link pointed at. */
+  highlighted?: boolean;
+  /** The share control, shown to whoever entered this build. */
+  share?: React.ReactNode;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -58,11 +64,21 @@ export function EntryVoteCard({
 
   return (
     <article
+      id={`entry-${entry.entryId}`}
+      // `card` sets its own border, so the highlight has to come from a style
+      style={
+        highlighted && !isWinner
+          ? { borderColor: "color-mix(in oklab, var(--color-voting) 55%, transparent)" }
+          : undefined
+      }
       className={cn(
         // Same stretched-link approach as ProjectCard: the card navigates to the
         // project, while the vote button and the code/demo links stay above it
-        "card card-hover group relative flex flex-wrap items-start gap-4 p-4 sm:flex-nowrap",
+        "card card-hover group relative flex flex-wrap items-start gap-4 p-4 scroll-mt-24 sm:flex-nowrap",
         isWinner && "border-[var(--color-winner)]/40 bg-[var(--color-winner)]/[0.04]",
+        // Someone who followed a shared link landed here to look at one build,
+        // and a page of identical cards does not tell them which
+        highlighted && !isWinner && "bg-[var(--color-voting)]/[0.05]",
       )}
     >
       {showResult && (
@@ -128,6 +144,8 @@ export function EntryVoteCard({
         </div>
 
         {error && <p className="mt-2 text-xs text-[var(--color-danger)]">{error}</p>}
+
+        {share}
 
         {footer}
       </div>

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import {
   getContestBySlug,
   getContestEntries,
+  getEntryShareCard,
   getMyTestReport,
   getTestSummary,
   getUserProjects,
@@ -19,20 +20,64 @@ import { SignInButton } from "@/components/auth-buttons";
 import { TargetIcon } from "@/components/target-icon";
 import { CommentThread } from "@/components/comment-thread";
 import { TestPanel } from "@/components/test-panel";
+import { EntryShare } from "@/components/entry-share";
 import { formatYearly, timeLeft } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ entry?: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, { entry: entryParam }] = await Promise.all([params, searchParams]);
   const contest = await getContestBySlug(slug);
-  return contest
-    ? { title: contest.title, description: contest.brief }
-    : { title: "Challenge not found" };
+  if (!contest) return { title: "Challenge not found" };
+
+  // A shared link carries the entry in the query string rather than only in the
+  // fragment: crawlers never receive a fragment, so #entry-12 alone would give
+  // every build the same preview card as the challenge itself
+  const shared = entryParam ? await getEntryShareCard(Number(entryParam)) : null;
+  if (shared && shared.contestSlug === slug) {
+    const price = shared.targetPrice != null ? formatYearly(shared.targetPrice) : null;
+    const title = shared.targetName
+      ? `${shared.projectName} replaces ${shared.targetName}`
+      : shared.projectName;
+    // The tagline is written as a card headline, so it may or may not end in
+    // punctuation — and this is a sentence now
+    const tagline = /[.!?]$/.test(shared.tagline.trim())
+      ? shared.tagline.trim()
+      : `${shared.tagline.trim()}.`;
+
+    const description = [
+      tagline,
+      price ? `${price} you stop paying.` : null,
+      "Vote for it in the Subless challenge.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        url: `/challenges/${slug}?entry=${shared.entryId}`,
+        images: [{ url: `/api/og/entry/${shared.entryId}`, width: 1200, height: 630 }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [`/api/og/entry/${shared.entryId}`],
+      },
+    };
+  }
+
+  return { title: contest.title, description: contest.brief };
 }
 
 const PHASE_COPY: Record<string, { label: string; color: string; note: string }> = {
@@ -63,10 +108,18 @@ const PHASE_COPY: Record<string, { label: string; color: string; note: string }>
   },
 };
 
-export default async function ContestPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function ContestPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ entry?: string }>;
+}) {
+  const [{ slug }, { entry: entryParam }] = await Promise.all([params, searchParams]);
   const [contest, session] = await Promise.all([getContestBySlug(slug), auth()]);
   if (!contest) notFound();
+
+  const sharedEntryId = entryParam ? Number(entryParam) : null;
 
   const userId = session?.user?.id;
   const [entries, userVote, myProjects] = await Promise.all([
@@ -245,6 +298,20 @@ export default async function ContestPage({ params }: { params: Promise<{ slug: 
                   canVote={votingOpen && Boolean(userId)}
                   isOwn={isOwn}
                   showResult={showResults}
+                  highlighted={sharedEntryId === entry.entryId}
+                  share={
+                    isOwn ? (
+                      <EntryShare
+                        entryId={entry.entryId}
+                        challengeSlug={contest.slug}
+                        projectName={entry.name}
+                        targetName={contest.targetName}
+                        yearly={
+                          contest.targetPrice != null ? formatYearly(contest.targetPrice) : null
+                        }
+                      />
+                    ) : null
+                  }
                   footer={
                     test ? (
                       <TestPanel
