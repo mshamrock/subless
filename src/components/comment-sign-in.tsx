@@ -17,7 +17,7 @@ export function CommentSignIn({ placeholder }: { placeholder: string }) {
       <button
         type="button"
         onClick={() => requireAuth("join the discussion")}
-        className="input cursor-text text-left text-[var(--color-faint)]"
+        className="input text-left text-[var(--color-faint)]"
       >
         {placeholder}
       </button>

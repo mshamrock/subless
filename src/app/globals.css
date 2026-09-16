@@ -63,6 +63,22 @@ body {
   color: #0a0b0d;
 }
 
+/* Tailwind v4 dropped the preflight rule that gave buttons a pointer, leaving
+   every control on the site with the same arrow as plain text. Restored in the
+   base layer rather than as a utility on each button: it is true of all of
+   them, and a `cursor-*` utility can still override it where one is wanted. */
+@layer base {
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)];
