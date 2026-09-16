@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -26,7 +26,7 @@ import {
   syncMetricsNow,
 } from "@/lib/actions/admin";
 import { ActionMessage, SubmitButton } from "./form-status";
-import { ContentManager } from "./content-manager";
+import { ContentManager, type ContestPrefill } from "./content-manager";
 import { TargetIcon } from "./target-icon";
 import { formatDate, formatMoney, timeLeft } from "@/lib/utils";
 import type { ActionResult } from "@/lib/actions/guard";
@@ -53,6 +53,7 @@ export function AdminPanel({
   managed: Managed;
 }) {
   const [message, setMessage] = useState<ActionResult | null>(null);
+  const [prefill, setPrefill] = useState<ContestPrefill | null>(null);
   const [pending, start] = useTransition();
 
   function run(fn: () => Promise<ActionResult>) {
@@ -155,9 +156,9 @@ export function AdminPanel({
         />
       </section>
 
-      <NewContestForm targets={data.targetList} />
+      <NewContestForm targets={data.targetList} prefill={prefill} onClear={() => setPrefill(null)} />
 
-      <ContentManager initial={managed} targets={data.targetList} />
+      <ContentManager initial={managed} targets={data.targetList} onPromote={setPrefill} />
 
       {/* Queue */}
       <section>
@@ -387,12 +388,37 @@ function StateCard({
   );
 }
 
-function NewContestForm({ targets }: { targets: { id: number; name: string }[] }) {
+function NewContestForm({
+  targets,
+  prefill,
+  onClear,
+}: {
+  targets: { id: number; name: string }[];
+  prefill: ContestPrefill | null;
+  onClear: () => void;
+}) {
   const [state, action] = useActionState<ActionResult | null, FormData>(createContest, null);
   const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLElement>(null);
+
+  // A nomination picked further down the page has to land somewhere visible,
+  // or the click looks like it did nothing
+  useEffect(() => {
+    if (!prefill) return;
+    setOpen(true);
+    anchor.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [prefill]);
+
+  // Once the contest exists the nomination is spent — drop the prefill so the
+  // next open starts blank instead of inviting a duplicate
+  useEffect(() => {
+    if (state?.ok && prefill) onClear();
+  }, [state, prefill, onClear]);
 
   return (
-    <section>
+    // The header is sticky, so scrolling here without the offset tucks the
+    // first line of the form underneath it
+    <section ref={anchor} className="scroll-mt-20">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -402,18 +428,45 @@ function NewContestForm({ targets }: { targets: { id: number; name: string }[] }
       </button>
 
       {open && (
-        <form action={action} className="card space-y-4 p-6">
+        // Remounting on a new nomination is what lets uncontrolled inputs pick
+        // up fresh defaults without fighting whatever was typed before
+        <form key={prefill?.nominationId ?? "blank"} action={action} className="card space-y-4 p-6">
           <ActionMessage state={state} />
+
+          {prefill && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-building)]/40 px-3 py-2 text-sm">
+              <TargetIcon name={prefill.targetName} size={16} />
+              <span>
+                From the nomination for <strong>{prefill.targetName}</strong> — creating this marks
+                it promoted on Most wanted.
+              </span>
+              <button
+                type="button"
+                onClick={onClear}
+                className="mono ml-auto text-xs text-[var(--color-faint)] hover:text-[var(--color-fg)]"
+              >
+                start blank
+              </button>
+              <input type="hidden" name="originNominationId" value={prefill.nominationId} />
+            </div>
+          )}
 
           <div>
             <label className="label" htmlFor="title">Contest title</label>
-            <input id="title" name="title" required placeholder="Miro alternative" className="input" />
+            <input
+              id="title"
+              name="title"
+              required
+              defaultValue={prefill?.title}
+              placeholder="Miro alternative"
+              className="input"
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr_140px]">
             <div>
               <label className="label" htmlFor="targetId">Service from the catalog</label>
-              <select id="targetId" name="targetId" className="input">
+              <select id="targetId" name="targetId" defaultValue={prefill?.targetId ?? ""} className="input">
                 <option value="">— none —</option>
                 {targets.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -422,17 +475,37 @@ function NewContestForm({ targets }: { targets: { id: number; name: string }[] }
             </div>
             <div>
               <label className="label" htmlFor="newTargetName">…or a new service</label>
-              <input id="newTargetName" name="newTargetName" placeholder="Miro" className="input" />
+              <input
+                id="newTargetName"
+                name="newTargetName"
+                defaultValue={prefill && !prefill.targetId ? prefill.targetName : undefined}
+                placeholder="Miro"
+                className="input"
+              />
             </div>
             <div>
               <label className="label" htmlFor="monthlyPriceUsd">$ per month</label>
-              <input id="monthlyPriceUsd" name="monthlyPriceUsd" type="number" min="0" step="0.01" className="input" />
+              <input
+                id="monthlyPriceUsd"
+                name="monthlyPriceUsd"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={prefill?.monthlyPriceUsd ?? undefined}
+                className="input"
+              />
             </div>
           </div>
 
           <div>
             <label className="label" htmlFor="newTargetUrl">New service website</label>
-            <input id="newTargetUrl" name="newTargetUrl" placeholder="https://miro.com" className="input" />
+            <input
+              id="newTargetUrl"
+              name="newTargetUrl"
+              defaultValue={prefill?.targetUrl ?? undefined}
+              placeholder="https://miro.com"
+              className="input"
+            />
           </div>
 
           <div>
@@ -442,6 +515,7 @@ function NewContestForm({ targets }: { targets: { id: number; name: string }[] }
               name="brief"
               required
               rows={3}
+              defaultValue={prefill?.brief}
               placeholder="This week we build a Miro alternative: infinite canvas, sticky notes, real-time collaboration."
               className="input resize-y"
             />
@@ -453,16 +527,23 @@ function NewContestForm({ targets }: { targets: { id: number; name: string }[] }
               id="requirements"
               name="requirements"
               rows={5}
+              autoFocus={!!prefill}
               placeholder={"Infinite canvas with zoom\nSticky notes and text blocks\nReal-time collaborative editing\nExport the board to PNG"}
               className="input resize-y font-mono text-sm"
             />
             <p className="mt-1.5 text-xs text-[var(--color-faint)]">
-              One item per line. Becomes the checklist voters judge against.
+              One item per line. Becomes the checklist voters judge against and testers verify —
+              leave it empty and the Test step has nothing to check.
             </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="startNow" className="accent-[var(--color-acid)]" />
+            <input
+              type="checkbox"
+              name="startNow"
+              defaultChecked={!!prefill}
+              className="accent-[var(--color-acid)]"
+            />
             Start immediately (unless another contest is already accepting entries)
           </label>
 

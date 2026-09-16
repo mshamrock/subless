@@ -15,7 +15,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { runWeeklyTick, uniqueContestSlug } from "@/lib/cycle";
+import { attachNominationToContest, runWeeklyTick, uniqueContestSlug } from "@/lib/cycle";
 import { syncAllProjects } from "@/lib/sync";
 import { sendWeeklyDigest } from "@/lib/email/weekly";
 import { seedReferenceData } from "@/lib/seed-data";
@@ -100,6 +100,7 @@ const contestSchema = z.object({
   newTargetUrl: z.string().trim().max(200).optional(),
   monthlyPriceUsd: z.coerce.number().min(0).max(100000).optional(),
   startNow: z.coerce.boolean().optional(),
+  originNominationId: z.coerce.number().optional(),
 });
 
 export async function createContest(_prev: unknown, formData: FormData): Promise<ActionResult> {
@@ -115,11 +116,41 @@ export async function createContest(_prev: unknown, formData: FormData): Promise
       newTargetUrl: formData.get("newTargetUrl") || undefined,
       monthlyPriceUsd: formData.get("monthlyPriceUsd") || undefined,
       startNow: formData.get("startNow") === "on",
+      originNominationId: formData.get("originNominationId") || undefined,
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
     const data = parsed.data;
 
-    let targetId = data.targetId || null;
+    // Promoting the same nomination twice would split the votes it collected
+    // across two contests and leave /wanted pointing at the wrong one
+    let origin: { id: number; targetId: number | null; status: string } | null = null;
+    if (data.originNominationId) {
+      const [row] = await db
+        .select({
+          id: nominations.id,
+          targetId: nominations.targetId,
+          status: nominations.status,
+          promotedContestId: nominations.promotedContestId,
+        })
+        .from(nominations)
+        .where(eq(nominations.id, data.originNominationId))
+        .limit(1);
+
+      if (!row) return { ok: false, error: "That nomination no longer exists" };
+      if (row.status === "promoted" && row.promotedContestId) {
+        const [live] = await db
+          .select({ id: contests.id, title: contests.title })
+          .from(contests)
+          .where(eq(contests.id, row.promotedContestId))
+          .limit(1);
+        if (live) {
+          return { ok: false, error: `This nomination is already the contest "${live.title}"` };
+        }
+      }
+      origin = row;
+    }
+
+    let targetId = data.targetId || origin?.targetId || null;
     if (!targetId && data.newTargetName?.trim()) {
       const slug = slugify(data.newTargetName);
       const [existing] = await db.select().from(targets).where(eq(targets.slug, slug)).limit(1);
@@ -162,29 +193,39 @@ export async function createContest(_prev: unknown, formData: FormData): Promise
       .from(contests)
       .where(eq(contests.status, "queued"));
 
-    await db.insert(contests).values({
-      slug: await uniqueContestSlug(data.title),
-      title: data.title,
-      brief: data.brief,
-      requirements,
-      targetId,
-      status: startNow ? "building" : "queued",
-      queuePosition: startNow ? 0 : (maxPos?.max ?? 0) + 1,
-      buildingStartsAt: startNow ? now : null,
-      votingStartsAt: startNow ? new Date(now.getTime() + WEEK) : null,
-    });
+    const [contest] = await db
+      .insert(contests)
+      .values({
+        slug: await uniqueContestSlug(data.title),
+        title: data.title,
+        brief: data.brief,
+        requirements,
+        targetId,
+        status: startNow ? "building" : "queued",
+        queuePosition: startNow ? 0 : (maxPos?.max ?? 0) + 1,
+        buildingStartsAt: startNow ? now : null,
+        votingStartsAt: startNow ? new Date(now.getTime() + WEEK) : null,
+      })
+      .returning();
+
+    if (origin) await attachNominationToContest(contest.id, origin.id);
 
     revalidatePath("/admin");
     revalidatePath("/challenges");
+    revalidatePath("/wanted");
     revalidatePath("/");
+
+    const where = startNow
+      ? "Contest started — the build week is running"
+      : alreadyBuilding && data.startNow
+        ? "Another contest is already accepting entries, so this one was queued instead"
+        : "Contest added to the queue";
 
     return {
       ok: true,
-      message: startNow
-        ? "Contest started — the build week is running"
-        : alreadyBuilding && data.startNow
-          ? "Another contest is already accepting entries, so this one was queued instead"
-          : "Contest added to the queue",
+      message: requirements.length
+        ? where
+        : `${where}. It has no required features, so there is nothing for testers to check — add them before the build week ends.`,
     };
   } catch (e) {
     return toActionError(e);
@@ -387,7 +428,9 @@ export async function getManagedContent(q = "") {
   const nominationRows = await db
     .select({
       id: nominations.id,
+      targetId: nominations.targetId,
       targetName: nominations.targetName,
+      targetUrl: nominations.targetUrl,
       pitch: nominations.pitch,
       status: nominations.status,
       monthlyPriceUsd: nominations.monthlyPriceUsd,

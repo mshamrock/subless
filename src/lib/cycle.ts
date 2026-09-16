@@ -151,6 +151,26 @@ export async function tallyContest(contestId: number) {
   return rows.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
+/**
+ * Records that a contest came from a nomination.
+ *
+ * The link goes both ways on purpose: the contest remembers what the community
+ * asked for, and the nomination stops appearing on /wanted as something still
+ * waiting to happen. Whoever creates the contest — the weekly tick or an admin
+ * by hand — has to leave the same trail, so both go through here.
+ */
+export async function attachNominationToContest(contestId: number, nominationId: number) {
+  await db
+    .update(contests)
+    .set({ originNominationId: nominationId })
+    .where(eq(contests.id, contestId));
+
+  await db
+    .update(nominations)
+    .set({ status: "promoted", promotedContestId: contestId })
+    .where(eq(nominations.id, nominationId));
+}
+
 /** Turn the most-voted approved nomination into a contest. */
 async function promoteTopNomination() {
   const [top] = await db
@@ -204,14 +224,10 @@ async function promoteTopNomination() {
       brief: top.pitch,
       requirements: [],
       status: "queued",
-      originNominationId: top.id,
     })
     .returning();
 
-  await db
-    .update(nominations)
-    .set({ status: "promoted", promotedContestId: contest.id })
-    .where(eq(nominations.id, top.id));
+  await attachNominationToContest(contest.id, top.id);
 
   return contest;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { Eye, EyeOff, Github, Plus, Search, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Github, Megaphone, Plus, Search, Trash2, X } from "lucide-react";
 import {
   addNominationAsAdmin,
   addProjectAsAdmin,
@@ -19,6 +19,21 @@ import type { ActionResult } from "@/lib/actions/guard";
 
 type Managed = Awaited<ReturnType<typeof getManagedContent>>;
 
+/**
+ * Everything the contest form can fill in for itself when a nomination becomes
+ * a challenge. Deliberately not the requirements: the checklist is the one part
+ * a person has to write, and it is what testers and voters later judge against.
+ */
+export interface ContestPrefill {
+  nominationId: number;
+  title: string;
+  targetId: number | null;
+  targetName: string;
+  targetUrl: string | null;
+  monthlyPriceUsd: number | null;
+  brief: string;
+}
+
 const STATUS_STYLE: Record<string, string> = {
   approved: "text-[var(--color-acid)] border-[var(--color-acid-dim)]/40",
   pending: "text-[var(--color-voting)] border-[var(--color-voting)]/40",
@@ -30,11 +45,14 @@ const STATUS_STYLE: Record<string, string> = {
 export function ContentManager({
   initial,
   targets,
+  onPromote,
 }: {
   initial: Managed;
   /** Real service ids. Nomination ids are a different key entirely — linking a
       project by the wrong one silently attaches it to the wrong subscription. */
   targets: { id: number; name: string }[];
+  /** Hands a nomination to the contest form above. */
+  onPromote: (prefill: ContestPrefill) => void;
 }) {
   const [data, setData] = useState(initial);
   const [query, setQuery] = useState(initial.query);
@@ -152,6 +170,25 @@ export function ContentManager({
                   </div>
 
                   <div className="flex shrink-0 gap-1.5">
+                    {n.status === "approved" && (
+                      <IconButton
+                        title="Make this the next challenge"
+                        disabled={pending}
+                        onClick={() =>
+                          onPromote({
+                            nominationId: n.id,
+                            title: `${n.targetName} alternative`,
+                            targetId: n.targetId,
+                            targetName: n.targetName,
+                            targetUrl: n.targetUrl,
+                            monthlyPriceUsd: n.monthlyPriceUsd,
+                            brief: n.pitch,
+                          })
+                        }
+                      >
+                        <Megaphone size={14} />
+                      </IconButton>
+                    )}
                     {n.status !== "approved" && (
                       <IconButton
                         title="Show"

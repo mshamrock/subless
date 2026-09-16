@@ -136,6 +136,32 @@ describe("runWeeklyTick", () => {
 
     const [used] = await db.select().from(nominations).where(eq(nominations.id, strong.id));
     expect(used.status).toBe("promoted");
+
+    // Both ends of the link, so /wanted can point at the contest it became
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, used.promotedContestId!));
+    expect(contest.originNominationId).toBe(strong.id);
+  });
+
+  it("leaves a losing nomination open for the next round", async () => {
+    const anna = await makeUser("anna");
+    const [weak] = await db
+      .insert(nominations)
+      .values({ targetName: "Weak", pitch: "meh", status: "approved", submittedById: anna })
+      .returning();
+    const [strong] = await db
+      .insert(nominations)
+      .values({ targetName: "Strong", pitch: "yes", status: "approved", submittedById: anna })
+      .returning();
+    await db.insert(nominationVotes).values({ nominationId: strong.id, userId: anna });
+
+    await runWeeklyTick("cron");
+
+    const [loser] = await db.select().from(nominations).where(eq(nominations.id, weak.id));
+    expect(loser.status).toBe("approved");
+    expect(loser.promotedContestId).toBeNull();
   });
 
   it("writes every run to the cycle log", async () => {
