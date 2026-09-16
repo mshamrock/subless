@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Database,
+  ListPlus,
   Github,
   Image,
   Mail,
@@ -18,6 +19,7 @@ import {
   fetchMissingIcons,
   previewWeeklyDigest,
   seedReference,
+  seedCandidateSlate,
   moderateNomination,
   moderateProject,
   moveInQueue,
@@ -72,6 +74,15 @@ export function AdminPanel({ data, state }: { data: AdminData; state: WeeklyStat
             className="btn-ghost"
           >
             <Database size={15} /> Seed reference data
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(seedCandidateSlate)}
+            title="Load the starting slate of subscriptions worth replacing. Zero votes, no author. Safe to run twice."
+            className="btn-ghost"
+          >
+            <ListPlus size={15} /> Load nomination candidates
           </button>
           <button
             type="button"

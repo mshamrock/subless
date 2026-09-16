@@ -18,6 +18,7 @@ import { runWeeklyTick, uniqueContestSlug } from "@/lib/cycle";
 import { syncAllProjects } from "@/lib/sync";
 import { sendWeeklyDigest } from "@/lib/email/weekly";
 import { seedReferenceData } from "@/lib/seed-data";
+import { seedCandidates } from "@/lib/seed-candidates";
 import { backfillTargetIcons, ensureTarget, ensureTargetIcon } from "@/lib/targets";
 import { slugify } from "@/lib/utils";
 import { toActionError, type ActionResult } from "./guard";
@@ -278,6 +279,37 @@ export async function seedReference(): Promise<ActionResult> {
     if (r.services) parts.push(`${r.services} services`);
     if (r.alternatives) parts.push(`${r.alternatives} alternatives`);
     if (r.skipped) parts.push(`${r.skipped} already present`);
+
+    return {
+      ok: true,
+      message: parts.length ? `Added ${parts.join(", ")}` : "Everything was already there",
+    };
+  } catch (e) {
+    return toActionError(e);
+  }
+}
+
+/**
+ * Loads the nomination candidate slate: services worth replacing, each with a
+ * concrete note on what a usable replacement actually needs. Zero votes, no
+ * author — a starting slate, not manufactured demand. Idempotent.
+ */
+export async function seedCandidateSlate(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const r = await seedCandidates();
+
+    revalidatePath("/");
+    revalidatePath("/wanted");
+    revalidatePath("/catalog");
+    revalidatePath("/admin");
+
+    const parts: string[] = [];
+    if (r.nominations) parts.push(`${r.nominations} nominations`);
+    if (r.services) parts.push(`${r.services} services`);
+    if (r.categories) parts.push(`${r.categories} categories`);
+    if (r.icons) parts.push(`${r.icons} icons`);
+    if (r.skipped) parts.push(`${r.skipped} already nominated`);
 
     return {
       ok: true,
