@@ -250,6 +250,12 @@ async function uniqueProjectSlug(name: string) {
 export interface RepoOption extends UserRepo {
   /** Already in the catalog, so it cannot be submitted again. */
   alreadySubmitted: boolean;
+  /**
+   * Where it already lives, when it is listed. "Taken by someone else" and
+   * "you published this last month" look identical from a greyed-out row, and
+   * only one of them is a dead end.
+   */
+  listed?: { slug: string; mine: boolean };
 }
 
 /**
@@ -271,18 +277,27 @@ export async function listMyRepositories(): Promise<
 
     const repos = await listUserRepos(token);
 
-    const taken = new Set(
-      (await db.select({ repoUrl: projects.repoUrl }).from(projects)).map((r) =>
+    const listedRows = await db
+      .select({
+        repoUrl: projects.repoUrl,
+        slug: projects.slug,
+        submittedById: projects.submittedById,
+      })
+      .from(projects);
+
+    const taken = new Map(
+      listedRows.map((r) => [
         r.repoUrl.toLowerCase(),
-      ),
+        { slug: r.slug, mine: r.submittedById === user.id },
+      ]),
     );
 
     return {
       ok: true,
-      repos: repos.map((r) => ({
-        ...r,
-        alreadySubmitted: taken.has(`https://github.com/${r.fullName}`.toLowerCase()),
-      })),
+      repos: repos.map((r) => {
+        const listed = taken.get(`https://github.com/${r.fullName}`.toLowerCase());
+        return { ...r, alreadySubmitted: !!listed, listed };
+      }),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -2,7 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Hammer, TrendingUp } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { getAllTargetsForPicker, getContestBySlug, getNominations } from "@/lib/queries";
+import {
+  getAllTargetsForPicker,
+  getContestBySlug,
+  getNominations,
+  getUserProjects,
+} from "@/lib/queries";
 import { getWeeklyState } from "@/lib/cycle";
 import { SubmitProjectForm } from "@/components/submit-project-form";
 import { SignInButton } from "@/components/auth-buttons";
@@ -35,6 +40,10 @@ export default async function SubmitPage({
     challenge && challenge.status === "building" ? challenge : null;
   const thisWeek = weekly.building ?? null;
   const topWanted = nominations.find((n) => n.votes > 0) ?? null;
+
+  // Someone whose build is already in the catalog does not need this form at
+  // all — they need the challenge page, and nothing here used to say so
+  const myProjects = session?.user?.id ? await getUserProjects(session.user.id) : [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -83,6 +92,19 @@ export default async function SubmitPage({
           <p className="mt-3 text-xs text-[var(--color-faint)]">
             Publishing here enters your build into the challenge automatically.
           </p>
+
+          {myProjects.length > 0 && (
+            <p className="mt-2 text-xs text-[var(--color-faint)]">
+              Already published it?{" "}
+              <Link
+                href={`/challenges/${openChallenge.slug}`}
+                className="text-[var(--color-building)] hover:underline"
+              >
+                Enter an existing build
+              </Link>{" "}
+              instead — a repository can only be in the catalog once.
+            </p>
+          )}
         </div>
       ) : (
         (thisWeek || topWanted) && (

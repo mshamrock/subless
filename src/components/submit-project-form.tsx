@@ -80,6 +80,7 @@ export function SubmitProjectForm({
           </p>
           <RepoPicker
             selected={repo}
+            challengeSlug={challengeSlug}
             onPick={(picked) => {
               setRepo(picked);
               if (picked) setResult(null);

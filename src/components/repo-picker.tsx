@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, Github, Loader2, Lock, Search, Star } from "lucide-react";
+import { ArrowRight, Check, Github, Loader2, Lock, Search, Star } from "lucide-react";
 import { listMyRepositories, type RepoOption } from "@/lib/actions/projects";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -15,9 +16,13 @@ import { cn, formatNumber } from "@/lib/utils";
 export function RepoPicker({
   onPick,
   selected,
+  challengeSlug,
 }: {
   onPick: (repo: RepoOption | null) => void;
   selected: RepoOption | null;
+  /** When publishing into a challenge, an already-published build of your own
+      has somewhere better to go than a disabled row. */
+  challengeSlug?: string;
 }) {
   const [repos, setRepos] = useState<RepoOption[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,19 +112,9 @@ export function RepoPicker({
       </div>
 
       <ul className="max-h-64 space-y-1 overflow-y-auto">
-        {visible.map((repo) => (
-          <li key={repo.fullName}>
-            <button
-              type="button"
-              disabled={repo.alreadySubmitted}
-              onClick={() => onPick(repo)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition-colors",
-                repo.alreadySubmitted
-                  ? "cursor-not-allowed opacity-45"
-                  : "hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]",
-              )}
-            >
+        {visible.map((repo) => {
+          const body = (
+            <>
               <Github size={14} className="shrink-0 text-[var(--color-faint)]" />
 
               <span className="min-w-0 flex-1">
@@ -139,15 +134,58 @@ export function RepoPicker({
                     <Star size={11} /> {formatNumber(repo.stars)}
                   </span>
                 )}
-                {repo.alreadySubmitted && (
-                  <span className="flex items-center gap-1" title="Already in the catalog">
-                    <Lock size={11} /> listed
+                {repo.listed?.mine ? (
+                  <span className="flex items-center gap-1 text-[var(--color-acid)]">
+                    {challengeSlug ? "enter this build" : "your build"}
+                    <ArrowRight size={11} />
                   </span>
+                ) : (
+                  repo.alreadySubmitted && (
+                    <span className="flex items-center gap-1" title="Published by someone else">
+                      <Lock size={11} /> listed
+                    </span>
+                  )
                 )}
               </span>
-            </button>
-          </li>
-        ))}
+            </>
+          );
+
+          const shell =
+            "flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition-colors";
+
+          // Your own published build is not a dead end — it is one click from
+          // the challenge it should be entered into
+          if (repo.listed?.mine) {
+            return (
+              <li key={repo.fullName}>
+                <Link
+                  href={challengeSlug ? `/challenges/${challengeSlug}` : `/projects/${repo.listed.slug}`}
+                  className={cn(shell, "hover:border-[var(--color-acid-dim)] hover:bg-[var(--color-surface-2)]")}
+                >
+                  {body}
+                </Link>
+              </li>
+            );
+          }
+
+          return (
+            <li key={repo.fullName}>
+              <button
+                type="button"
+                disabled={repo.alreadySubmitted}
+                onClick={() => onPick(repo)}
+                className={cn(
+                  shell,
+                  repo.alreadySubmitted
+                    ? "cursor-not-allowed opacity-45"
+                    : "hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]",
+                )}
+              >
+                {body}
+              </button>
+            </li>
+          );
+        })}
 
         {visible.length === 0 && (
           <li className="px-3 py-2 text-sm text-[var(--color-faint)]">No matches</li>
