@@ -1,16 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * How many category chips survive the fold. Enough to show what the site is
- * mostly made of; few enough that the filter does not push the nominations
- * themselves off the first screen.
- */
-const COLLAPSED_COUNT = 8;
+/** Matches the `gap-1.5` on the chip row. */
+const CHIP_GAP = 6;
 
 export interface NominationCategory {
   slug: string;
@@ -65,16 +61,70 @@ export function WantedFilters({
     push(next);
   }
 
-  // A filter you cannot see is a filter you cannot switch off, so the selected
-  // category stays on screen even when it lives past the fold
-  const collapsed = categories.slice(0, COLLAPSED_COUNT);
-  const selectedIsHidden =
-    !!current.category && !collapsed.some((c) => c.slug === current.category);
-  const visibleCategories = showAllCategories
-    ? categories
-    : selectedIsHidden
-      ? [...collapsed, ...categories.filter((c) => c.slug === current.category)]
-      : collapsed;
+  // How many chips fit on one line is a question about pixels, not about a
+  // number picked in advance: the names differ in length and the viewport
+  // differs per person, so the row measures itself and keeps exactly one line
+  const rowRef = useRef<HTMLDivElement>(null);
+  const widthsRef = useRef<number[] | null>(null);
+  const [fitCount, setFitCount] = useState<number | null>(null);
+
+  const selectedIndex = current.category
+    ? categories.findIndex((c) => c.slug === current.category)
+    : -1;
+
+  const measure = useCallback(() => {
+    const row = rowRef.current;
+    if (!row) return;
+
+    // Widths are read once, while every chip is still mounted. They do not
+    // change with the viewport, so a resize only re-runs the arithmetic
+    if (!widthsRef.current) {
+      widthsRef.current = Array.from(row.children).map(
+        (child) => (child as HTMLElement).getBoundingClientRect().width,
+      );
+    }
+    const widths = widthsRef.current;
+    if (widths.length < 2) return;
+
+    const available = row.clientWidth;
+    const allChip = widths[0];
+    const toggle = widths[widths.length - 1];
+
+    // The selected chip is never dropped, so its width is spoken for upfront
+    const selectedFixed =
+      selectedIndex >= 0 ? widths[selectedIndex + 1] + CHIP_GAP : 0;
+
+    let used = allChip + CHIP_GAP + toggle + selectedFixed;
+    let fits = 0;
+    for (let i = 0; i < categories.length; i++) {
+      if (i === selectedIndex) continue;
+      const width = widths[i + 1] + CHIP_GAP;
+      if (used + width > available) break;
+      used += width;
+      fits++;
+    }
+    setFitCount(fits);
+  }, [categories.length, selectedIndex]);
+
+  useLayoutEffect(() => {
+    measure();
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [measure]);
+
+  // Until the row has measured itself every chip is rendered, which is both how
+  // the widths get read and what someone without JavaScript ends up seeing
+  const visibleCategories =
+    showAllCategories || fitCount === null
+      ? categories
+      : categories.filter((c, i) => {
+          if (i === selectedIndex) return true;
+          const before = selectedIndex >= 0 && selectedIndex < i ? 1 : 0;
+          return i - before < fitCount;
+        });
 
   return (
     <div className="space-y-3">
@@ -103,7 +153,7 @@ export function WantedFilters({
       </div>
 
       {categories.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div ref={rowRef} className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setCategory("")}
@@ -132,7 +182,11 @@ export function WantedFilters({
             </button>
           ))}
 
-          {categories.length > COLLAPSED_COUNT && (
+          {/* Always present for the measuring pass — its width is what the
+              arithmetic reserves, so it cannot be missing while widths are read */}
+          {(fitCount === null ||
+            showAllCategories ||
+            visibleCategories.length < categories.length) && (
             <button
               type="button"
               onClick={() => setShowAllCategories((v) => !v)}
