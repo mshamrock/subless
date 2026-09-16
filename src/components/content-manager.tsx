@@ -171,9 +171,13 @@ export function ContentManager({
 
                   <div className="flex shrink-0 gap-1.5">
                     {n.status === "approved" && (
-                      <IconButton
-                        title="Make this the next challenge"
+                      // Labelled rather than another icon in the row: starting a
+                      // challenge is the one action here nobody should have to
+                      // hover three buttons to find
+                      <button
+                        type="button"
                         disabled={pending}
+                        title="Fill the contest form with this nomination"
                         onClick={() =>
                           onPromote({
                             nominationId: n.id,
@@ -185,9 +189,14 @@ export function ContentManager({
                             brief: n.pitch,
                           })
                         }
+                        // The chip class sets its own border, so the tint has to
+                        // come from a style to win the cascade
+                        style={{ borderColor: "color-mix(in oklab, var(--color-building) 45%, transparent)" }}
+                        className="chip whitespace-nowrap text-[var(--color-building)] disabled:opacity-40"
                       >
-                        <Megaphone size={14} />
-                      </IconButton>
+                        <Megaphone size={13} />
+                        Make it a challenge
+                      </button>
                     )}
                     {n.status !== "approved" && (
                       <IconButton

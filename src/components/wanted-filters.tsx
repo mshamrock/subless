@@ -2,8 +2,15 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/**
+ * How many category chips survive the fold. Enough to show what the site is
+ * mostly made of; few enough that the filter does not push the nominations
+ * themselves off the first screen.
+ */
+const COLLAPSED_COUNT = 8;
 
 export interface NominationCategory {
   slug: string;
@@ -32,6 +39,7 @@ export function WantedFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [value, setValue] = useState(current.q);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   function push(next: URLSearchParams) {
     const query = next.toString();
@@ -56,6 +64,17 @@ export function WantedFilters({
     else next.delete("category");
     push(next);
   }
+
+  // A filter you cannot see is a filter you cannot switch off, so the selected
+  // category stays on screen even when it lives past the fold
+  const collapsed = categories.slice(0, COLLAPSED_COUNT);
+  const selectedIsHidden =
+    !!current.category && !collapsed.some((c) => c.slug === current.category);
+  const visibleCategories = showAllCategories
+    ? categories
+    : selectedIsHidden
+      ? [...collapsed, ...categories.filter((c) => c.slug === current.category)]
+      : collapsed;
 
   return (
     <div className="space-y-3">
@@ -97,7 +116,7 @@ export function WantedFilters({
             <span className="mono text-[var(--color-faint)]">{total}</span>
           </button>
 
-          {categories.map((c) => (
+          {visibleCategories.map((c) => (
             <button
               key={c.slug}
               type="button"
@@ -112,6 +131,21 @@ export function WantedFilters({
               <span className="mono text-[var(--color-faint)]">{c.count}</span>
             </button>
           ))}
+
+          {categories.length > COLLAPSED_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((v) => !v)}
+              aria-expanded={showAllCategories}
+              className="chip text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+            >
+              {showAllCategories ? "Show fewer" : `Show all ${categories.length}`}
+              <ChevronDown
+                size={13}
+                className={cn("transition-transform", showAllCategories && "rotate-180")}
+              />
+            </button>
+          )}
         </div>
       )}
     </div>

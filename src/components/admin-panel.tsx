@@ -166,7 +166,10 @@ export function AdminPanel({
         {data.queue.length === 0 ? (
           <p className="card p-5 text-sm text-[var(--color-muted)]">
             The queue is empty. On the next cycle tick, the most-voted approved nomination
-            automatically becomes the topic.
+            automatically becomes the topic — with no requirements, since nobody wrote any. To
+            choose the topic and its checklist yourself, hit{" "}
+            <span className="text-[var(--color-building)]">Make it a challenge</span> on any
+            nomination under Manage content.
           </p>
         ) : (
           <div className="space-y-2">
