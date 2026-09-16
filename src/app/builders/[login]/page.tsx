@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Github, Trophy } from "lucide-react";
+import { Github, Plus, Trophy } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   getAuthorSummary,
@@ -85,6 +85,14 @@ export default async function BuilderProfilePage({
             )}
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
+              {/* Publishing another build is the thing this page is for once the
+                  first one exists — until now it was only offered on the empty
+                  state, which disappears the moment you succeed at it */}
+              {isSelf && (
+                <Link href="/submit" className="btn-primary">
+                  <Plus size={15} /> Publish a build
+                </Link>
+              )}
               <a
                 href={`https://github.com/${profile.login}`}
                 target="_blank"
