@@ -15,7 +15,8 @@
     "db:logos": "tsx scripts/logos.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed:prod": "tsx scripts/seed-production.ts"
+    "db:seed:prod": "tsx scripts/seed-production.ts",
+    "vercel-build": "tsx scripts/push.ts && next build"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.4",

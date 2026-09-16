@@ -2,12 +2,22 @@
 
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Github, Image, Mail, RefreshCw, SkipForward } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Github,
+  Image,
+  Mail,
+  RefreshCw,
+  SkipForward,
+} from "lucide-react";
 import {
   advanceCycle,
   createContest,
   fetchMissingIcons,
   previewWeeklyDigest,
+  seedReference,
   moderateNomination,
   moderateProject,
   moveInQueue,
@@ -53,6 +63,15 @@ export function AdminPanel({ data, state }: { data: AdminData; state: WeeklyStat
             className="btn-ghost"
           >
             <RefreshCw size={15} /> Sync metrics
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(seedReference)}
+            title="Load categories, paid services and already-catalogued alternatives. Safe to run twice."
+            className="btn-ghost"
+          >
+            <Database size={15} /> Seed reference data
           </button>
           <button
             type="button"

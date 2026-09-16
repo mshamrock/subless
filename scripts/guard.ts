@@ -15,6 +15,9 @@ export async function assertDatabaseFree(
   adminAction?: string,
   port = Number(process.env.PORT ?? 3000),
 ) {
+  // A real Postgres server has no single-process restriction, so this guard is
+  // only ever about the local PGlite file. That also makes `npm run db:push`
+  // safe to run inside a Vercel build, where DATABASE_URL is always set.
   if (process.env.DATABASE_URL?.trim()) return;
 
   const inUse = await new Promise<boolean>((resolve) => {

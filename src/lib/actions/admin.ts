@@ -17,6 +17,7 @@ import { requireAdmin } from "@/lib/auth";
 import { runWeeklyTick, uniqueContestSlug } from "@/lib/cycle";
 import { syncAllProjects } from "@/lib/sync";
 import { sendWeeklyDigest } from "@/lib/email/weekly";
+import { seedReferenceData } from "@/lib/seed-data";
 import { backfillTargetIcons, ensureTarget, ensureTargetIcon } from "@/lib/targets";
 import { slugify } from "@/lib/utils";
 import { toActionError, type ActionResult } from "./guard";
@@ -252,6 +253,36 @@ export async function previewWeeklyDigest(): Promise<ActionResult> {
     if (r.failed.length) parts.push(`failed: ${r.failed.join("; ")}`);
 
     return { ok: true, message: parts.join(" · ") };
+  } catch (e) {
+    return toActionError(e);
+  }
+}
+
+/**
+ * Loads the reference catalog — categories, paid services and the open-source
+ * alternatives already catalogued. Idempotent, so it is safe to press twice, and
+ * available here so nobody needs a production connection string to run it.
+ */
+export async function seedReference(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const r = await seedReferenceData();
+
+    revalidatePath("/");
+    revalidatePath("/catalog");
+    revalidatePath("/wanted");
+    revalidatePath("/admin");
+
+    const parts: string[] = [];
+    if (r.categories) parts.push(`${r.categories} categories`);
+    if (r.services) parts.push(`${r.services} services`);
+    if (r.alternatives) parts.push(`${r.alternatives} alternatives`);
+    if (r.skipped) parts.push(`${r.skipped} already present`);
+
+    return {
+      ok: true,
+      message: parts.length ? `Added ${parts.join(", ")}` : "Everything was already there",
+    };
   } catch (e) {
     return toActionError(e);
   }
