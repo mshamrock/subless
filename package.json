@@ -1,0 +1,46 @@
+{
+  "name": "subless",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "tsx scripts/push.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:sync": "tsx scripts/sync.ts",
+    "db:stats": "tsx scripts/stats.ts",
+    "db:logos": "tsx scripts/logos.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:seed:prod": "tsx scripts/seed-production.ts"
+  },
+  "dependencies": {
+    "@auth/drizzle-adapter": "^1.7.4",
+    "@electric-sql/pglite": "^0.2.17",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.38.3",
+    "lucide-react": "^0.469.0",
+    "next": "^15.1.6",
+    "next-auth": "^5.0.0-beta.25",
+    "postgres": "^3.4.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.6",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "drizzle-kit": "^0.30.2",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.1"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789547613782,
+      "tag": "0000_numerous_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789552439297,
+      "tag": "0001_thick_boom_boom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789555351438,
+      "tag": "0002_material_the_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789558067250,
+      "tag": "0003_living_baron_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789558757526,
+      "tag": "0004_new_boomerang",
+      "breakpoints": true
+    }
+  ]
+}
