@@ -216,7 +216,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           {/* Only the author sees it: it goes in their repository, and for
               anyone else it is a control they cannot act on */}

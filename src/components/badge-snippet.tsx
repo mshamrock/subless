@@ -48,7 +48,10 @@ export function BadgeSnippet({
       <img src={preview} alt={alt} height={20} className="block" />
 
       <div className="flex items-start gap-2">
-        <code className="mono min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-[11px] text-[var(--color-muted)]">
+        {/* w-0 alongside flex-1: without an explicit width the snippet's own
+            length becomes the layout's minimum, and one unbreakable line of
+            markdown then widens every ancestor up to the page */}
+        <code className="mono w-0 min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-[11px] text-[var(--color-muted)]">
           {markdown}
         </code>
         <button
