@@ -25,11 +25,14 @@ export function NominationForm({ defaultName = "" }: { defaultName?: string }) {
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="card space-y-4 p-6">
+    // A container query, not a viewport one: this form sits full width at the
+    // bottom of a phone and in a 360px column beside the list on a desktop, and
+    // what it has to fit is the column, not the screen
+    <form ref={formRef} onSubmit={handleSubmit} className="card @container space-y-4 p-6">
       <h2 className="eyebrow">What subscription do you hate paying for?</h2>
       <ActionMessage state={result} />
 
-      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_140px]">
+      <div className="grid gap-4 @lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
         <div>
           <label className="label" htmlFor="targetName">Subscription</label>
           <input

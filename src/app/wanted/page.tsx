@@ -55,104 +55,114 @@ export default async function WantedPage({
   const totalDemand = (allNominations ?? nominations).reduce((sum, n) => sum + n.votes, 0);
 
   return (
-    <div className="space-y-8">
-      <header>
-        <p className="eyebrow mb-3">{BRAND.mechanism}</p>
-        <h1 className="text-4xl font-bold tracking-tight">Most wanted replacements</h1>
-        <p className="mt-3 max-w-2xl text-lg leading-relaxed text-[var(--color-muted)]">
-          What SaaS subscription do you hate paying for? Vote it up. The strongest demand
-          becomes the next Subless Challenge — so the community decides what should exist
-          before anyone writes a line of it.
-        </p>
-        <p className="mono mt-4 text-sm text-[var(--color-faint)]">
-          {total} {plural(total, "subscription", "subscriptions")} nominated · {totalDemand}{" "}
-          {plural(totalDemand, "vote", "votes")} cast
-        </p>
-      </header>
+    // The form is the page's point, so on a wide screen it sits beside the list
+    // rather than under it. It stays last in the DOM: stacked on a phone that
+    // puts it after the nominations, which is the order that page already had
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <div className="space-y-8">
+        <header>
+          <p className="eyebrow mb-3">{BRAND.mechanism}</p>
+          <h1 className="text-4xl font-bold tracking-tight">Most wanted replacements</h1>
+          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-[var(--color-muted)]">
+            What SaaS subscription do you hate paying for? Vote it up. The strongest demand
+            becomes the next Subless Challenge — so the community decides what should exist
+            before anyone writes a line of it.
+          </p>
+          <p className="mono mt-4 text-sm text-[var(--color-faint)]">
+            {total} {plural(total, "subscription", "subscriptions")} nominated · {totalDemand}{" "}
+            {plural(totalDemand, "vote", "votes")} cast
+          </p>
+        </header>
 
-      <WantedFilters
-        categories={categories}
-        total={total}
-        current={{ q: query, category: activeCategory }}
-      />
+        <WantedFilters
+          categories={categories}
+          total={total}
+          current={{ q: query, category: activeCategory }}
+        />
 
-      {/* Already solved beats "not found": the answer they wanted is a working
-          alternative, not the chance to ask for one */}
-      {covered && (
-        <Link
-          href={`/alternatives/${covered.slug}`}
-          className="card card-hover flex flex-wrap items-center justify-between gap-4 p-5"
-          style={{ borderColor: "color-mix(in oklab, var(--color-acid) 35%, transparent)" }}
-        >
-          <div className="flex items-center gap-3">
-            <TargetIcon name={covered.name} logoUrl={covered.logoUrl} size={28} />
-            <div>
-              <p className="font-semibold">
-                {covered.name} already has {covered.alternatives}{" "}
-                {plural(covered.alternatives, "alternative", "alternatives")}
-              </p>
-              <p className="mono text-xs text-[var(--color-acid)]">
-                {formatYearly(covered.monthlyPriceUsd)} you could stop paying
-              </p>
+        {/* Already solved beats "not found": the answer they wanted is a working
+            alternative, not the chance to ask for one */}
+        {covered && (
+          <Link
+            href={`/alternatives/${covered.slug}`}
+            className="card card-hover flex flex-wrap items-center justify-between gap-4 p-5"
+            style={{ borderColor: "color-mix(in oklab, var(--color-acid) 35%, transparent)" }}
+          >
+            <div className="flex items-center gap-3">
+              <TargetIcon name={covered.name} logoUrl={covered.logoUrl} size={28} />
+              <div>
+                <p className="font-semibold">
+                  {covered.name} already has {covered.alternatives}{" "}
+                  {plural(covered.alternatives, "alternative", "alternatives")}
+                </p>
+                <p className="mono text-xs text-[var(--color-acid)]">
+                  {formatYearly(covered.monthlyPriceUsd)} you could stop paying
+                </p>
+              </div>
             </div>
-          </div>
-          <span className="btn-primary pointer-events-none">
-            Go Subless on {covered.name} <ArrowRight size={15} />
-          </span>
-        </Link>
-      )}
+            <span className="btn-primary pointer-events-none">
+              Go Subless on {covered.name} <ArrowRight size={15} />
+            </span>
+          </Link>
+        )}
 
-      <section className="space-y-3">
-        {nominations.length === 0 ? (
-          query ? (
-            <EmptyState
-              title={`Nobody has nominated ${query} yet`}
-              hint="Be the first — the form below already has it filled in. Say what you would actually need instead, and it becomes the challenge requirements."
-            />
-          ) : (
-            activeCategory ? (
+        <section className="space-y-3">
+          {nominations.length === 0 ? (
+            query ? (
               <EmptyState
-                title={`Nothing nominated under ${categoryName} yet`}
-                hint="Pick another category, or nominate the first subscription in this one."
+                title={`Nobody has nominated ${query} yet`}
+                hint="Be the first — the form below already has it filled in. Say what you would actually need instead, and it becomes the challenge requirements."
               />
             ) : (
-              <EmptyState
-                title="Nothing nominated yet"
-                hint="Name a subscription you are tired of paying for. Once an admin checks it, everyone can vote."
-              />
+              activeCategory ? (
+                <EmptyState
+                  title={`Nothing nominated under ${categoryName} yet`}
+                  hint="Pick another category, or nominate the first subscription in this one."
+                />
+              ) : (
+                <EmptyState
+                  title="Nothing nominated yet"
+                  hint="Name a subscription you are tired of paying for. Once an admin checks it, everyone can vote."
+                />
+              )
             )
-          )
-        ) : (
-          <>
-            {filtering && (
-              <p className="mono text-xs text-[var(--color-faint)]">
-                {nominations.length} {plural(nominations.length, "result", "results")}
-                {query && <> for &quot;{query}&quot;</>}
-                {activeCategory && <> in {categoryName}</>}
-              </p>
-            )}
-            {nominations.map((n, i) => (
-              <NominationRow
-                key={n.id}
-                nomination={n}
-                voted={myVotes.has(n.id)}
-                rank={filtering ? undefined : i + 1}
-              />
-            ))}
-          </>
-        )}
-      </section>
+          ) : (
+            <>
+              {filtering && (
+                <p className="mono text-xs text-[var(--color-faint)]">
+                  {nominations.length} {plural(nominations.length, "result", "results")}
+                  {query && <> for &quot;{query}&quot;</>}
+                  {activeCategory && <> in {categoryName}</>}
+                </p>
+              )}
+              {nominations.map((n, i) => (
+                <NominationRow
+                  key={n.id}
+                  nomination={n}
+                  voted={myVotes.has(n.id)}
+                  rank={filtering ? undefined : i + 1}
+                />
+              ))}
+            </>
+          )}
+        </section>
 
-      {userId ? (
-        <NominationForm defaultName={nominations.length === 0 ? query : ""} />
-      ) : (
-        <div className="card flex flex-wrap items-center justify-between gap-4 p-5">
-          <p className="text-sm text-[var(--color-muted)]">
-            Sign in with GitHub to nominate a subscription and vote.
-          </p>
-          <SignInButton redirectTo={query ? `/wanted?q=${encodeURIComponent(query)}` : "/wanted"} />
-        </div>
-      )}
+      </div>
+
+      <aside className="lg:sticky lg:top-24">
+        {userId ? (
+          <NominationForm defaultName={nominations.length === 0 ? query : ""} />
+        ) : (
+          <div className="card space-y-3 p-5">
+            <p className="text-sm text-[var(--color-muted)]">
+              Sign in with GitHub to nominate a subscription and vote.
+            </p>
+            <SignInButton
+              redirectTo={query ? `/wanted?q=${encodeURIComponent(query)}` : "/wanted"}
+            />
+          </div>
+        )}
+      </aside>
     </div>
   );
 }
