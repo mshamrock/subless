@@ -21,6 +21,19 @@ export function formatNumber(n: number): string {
   return String(n);
 }
 
+/**
+ * Ends a fragment so another sentence can follow it.
+ *
+ * Taglines are written as card headings, where a full stop looks fussy — but a
+ * meta description puts a second sentence right after one, and "Screenshotter
+ * Free and open source" reads as a single broken thought.
+ */
+export function asSentence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
 export function plural(n: number, one: string, many: string): string {
   return n === 1 ? one : many;
 }

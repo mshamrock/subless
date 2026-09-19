@@ -34,7 +34,14 @@ import { GoSublessButton } from "@/components/go-subless-button";
 import { BadgeRow } from "@/components/badge-row";
 import { RepoInsights } from "@/components/repo-insights";
 import { CommentThread } from "@/components/comment-thread";
-import { formatDate, formatMoneyCompact, formatNumber, formatYearly, prettyHost } from "@/lib/utils";
+import {
+  asSentence,
+  formatDate,
+  formatMoneyCompact,
+  formatNumber,
+  formatYearly,
+  prettyHost,
+} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +53,17 @@ export async function generateMetadata({
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
   if (!project) return { title: "Project not found" };
-  return { title: project.name, description: project.tagline };
+
+  // A build's own name is not what anyone searches for. What the build replaces
+  // is — so the title carries it, and the name comes along for the brand query
+  const replaces = project.targets.map((t) => t.name).join(" and ");
+
+  return {
+    title: replaces ? `${project.name} — a free ${replaces} alternative` : project.name,
+    description: replaces
+      ? `${asSentence(project.tagline)} Free and open source, built by the Subless community to replace ${replaces}.`
+      : project.tagline,
+  };
 }
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -164,9 +164,11 @@ export function AdminPanel({
 
       <NewContestForm targets={data.targetList} prefill={prefill} onClear={() => setPrefill(null)} />
 
-      <ContentManager initial={managed} targets={data.targetList} onPromote={setPrefill} />
-
+      {/* Above Manage content on purpose: that list renders sixty cards, and a
+          worklist you have to scroll past them to reach is one nobody uses */}
       <SeoPanel initial={seo} onPromote={setPrefill} />
+
+      <ContentManager initial={managed} targets={data.targetList} onPromote={setPrefill} />
 
       {/* Queue */}
       <section>

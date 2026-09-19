@@ -37,11 +37,23 @@ export async function generateMetadata({
   // Copy written in the admin's SEO panel always beats it
   const written = target.description?.trim();
 
+  // "Go Subless on Notion" is a brand phrase nobody types. What people search
+  // is "notion alternative", and the title has to say the page holds one —
+  // with the count, because a number in a result is worth more than an adjective
+  const title =
+    substance.builds > 0
+      ? `${substance.builds} free ${target.name} ${plural(substance.builds, "alternative", "alternatives")}`
+      : substance.votes > 0
+        ? `Free ${target.name} alternative wanted — ${substance.votes} ${plural(substance.votes, "vote", "votes")}`
+        : `Free ${target.name} alternatives`;
+
   return {
-    title: goSublessOn(target.name),
+    title,
     description: written
       ? metaSummary(written)
-      : `Free community-built alternatives to ${target.name}. ${formatYearly(target.monthlyPriceUsd)} you could stop paying.`,
+      : substance.builds > 0
+        ? `Free community-built alternatives to ${target.name}. ${formatYearly(target.monthlyPriceUsd)} you could stop paying.`
+        : `Nobody has built a free ${target.name} alternative yet. Vote it up and it becomes the next Subless Challenge.`,
     // Nothing built and nobody asking yet: the page is a template with a name in
     // it. `follow` stays on, so it still passes link equity to the catalog and
     // comes back into the index by itself the moment it has either
@@ -90,7 +102,12 @@ export default async function AlternativesPage({
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <TargetIcon name={target.name} logoUrl={target.logoUrl} size={44} />
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{target.name}</h1>
+              {/* The phrase people search, not the brand alone: this page is the
+                  alternatives to a service, and its heading should say so */}
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                {target.name}{" "}
+                <span className="font-semibold text-[var(--color-muted)]">alternatives</span>
+              </h1>
             </div>
 
             {target.monthlyPriceUsd != null && (
