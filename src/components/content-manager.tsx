@@ -25,7 +25,9 @@ type Managed = Awaited<ReturnType<typeof getManagedContent>>;
  * a person has to write, and it is what testers and voters later judge against.
  */
 export interface ContestPrefill {
-  nominationId: number;
+  /** Absent when the service came from somewhere other than a nomination — the
+      SEO worklist, say — in which case there is no nomination to mark promoted. */
+  nominationId?: number;
   title: string;
   targetId: number | null;
   targetName: string;

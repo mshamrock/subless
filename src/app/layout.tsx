@@ -18,6 +18,13 @@ export const metadata: Metadata = {
       "application/rss+xml": [{ url: `${BRAND.url}/feed.xml`, title: `${BRAND.name} challenges` }],
     },
   },
+  // Search Console's URL-prefix verification. A DNS-verified domain property is
+  // the better claim — it covers every subdomain and both schemes, and cannot be
+  // lost to a deploy that drops a tag — but this costs nothing, works when DNS is
+  // somebody else's to change, and emits nothing at all while the variable is unset
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
   openGraph: {
     type: "website",
     siteName: BRAND.name,

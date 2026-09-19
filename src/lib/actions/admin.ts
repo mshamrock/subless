@@ -21,6 +21,7 @@ import { sendWeeklyDigest } from "@/lib/email/weekly";
 import { seedReferenceData } from "@/lib/seed-data";
 import { seedCandidates } from "@/lib/seed-candidates";
 import { backfillTargetIcons, ensureTarget, ensureTargetIcon } from "@/lib/targets";
+import { getTargetDemandMap, getTargetsWithCounts } from "@/lib/queries";
 import { slugify } from "@/lib/utils";
 import { toActionError, type ActionResult } from "./guard";
 
@@ -522,4 +523,121 @@ export async function getAdminData() {
     .orderBy(asc(targets.name));
 
   return { pendingProjects, pendingNominations, queue, log, targetList };
+}
+
+/* ──────────────────────────────────  SEO  ─────────────────────────────────── */
+
+/**
+ * The worklist for the `/alternatives/<service>` pages, which are the site's
+ * organic entry point and far too many to hold in anyone's head.
+ *
+ * Two separate questions, deliberately kept apart because they have different
+ * answers and different fixes:
+ *
+ * - **Is the page in the index at all?** A build or a vote, the same test
+ *   `getIndexableTargetSlugs` applies to the sitemap and the page applies to its
+ *   own robots tag. Reporting a different number here would mean the admin
+ *   screen and the site disagree about what is published.
+ * - **Is it worth the click once it is there?** Copy, plus either a build or the
+ *   challenge checklist. An indexed page with neither is a template with a name
+ *   in it, and the visitor bounces.
+ *
+ * Order follows what fixing something is worth. Indexed pages missing copy come
+ * first: they are already collecting impressions and wasting them. Pages nobody
+ * can find come last, because writing for them is writing into a drawer.
+ */
+export async function getSeoAudit(q = "") {
+  await requireAdmin();
+
+  // Three reads merged in memory. Joining builds, nomination votes and contests
+  // into one statement fans the rows out and multiplies every count
+  const [targetRows, demand, checklisted] = await Promise.all([
+    getTargetsWithCounts(),
+    getTargetDemandMap(),
+    db
+      .selectDistinct({ targetId: contests.targetId })
+      .from(contests)
+      .where(sql`cardinality(${contests.requirements}) > 0`),
+  ]);
+
+  const hasChecklist = new Set(
+    checklisted.map((c) => c.targetId).filter((id): id is number => id != null),
+  );
+
+  const rows = targetRows.map((t) => {
+    const votes = demand.get(t.id) ?? 0;
+    const checklist = hasChecklist.has(t.id);
+    const copy = Boolean(t.description?.trim());
+    const indexable = t.alternatives > 0 || votes > 0;
+
+    const missing: string[] = [];
+    if (!copy) missing.push("no description");
+    if (!checklist) missing.push("no checklist");
+
+    return {
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      description: t.description,
+      categoryName: t.categoryName,
+      builds: t.alternatives,
+      votes,
+      indexable,
+      missing,
+      /** In the index and worth the click once someone gets there. */
+      ready: indexable && copy && (t.alternatives > 0 || checklist),
+    };
+  });
+
+  const needle = q.trim().toLowerCase();
+  const filtered = needle
+    ? rows.filter((r) => r.name.toLowerCase().includes(needle) || r.slug.includes(needle))
+    : rows;
+
+  // Indexed and unfinished first, then indexed and done, then the invisible ones
+  function rank(r: (typeof rows)[number]) {
+    if (r.indexable && !r.ready) return 0;
+    if (r.indexable) return 1;
+    return 2;
+  }
+  filtered.sort(
+    (a, b) =>
+      rank(a) - rank(b) ||
+      b.builds * 3 + b.votes - (a.builds * 3 + a.votes) ||
+      a.name.localeCompare(b.name),
+  );
+
+  const indexable = rows.filter((r) => r.indexable);
+  return {
+    rows: filtered,
+    total: rows.length,
+    indexable: indexable.length,
+    ready: rows.filter((r) => r.ready).length,
+    query: q,
+  };
+}
+
+export async function updateTargetDescription(
+  targetId: number,
+  description: string,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const text = description.trim();
+
+    const [row] = await db
+      .update(targets)
+      .set({ description: text || null })
+      .where(eq(targets.id, targetId))
+      .returning({ slug: targets.slug, name: targets.name });
+
+    if (!row) return { ok: false, error: "No such service" };
+
+    revalidatePath(`/alternatives/${row.slug}`);
+    revalidatePath("/alternatives");
+    revalidatePath("/admin");
+    return { ok: true, message: text ? `${row.name} description saved` : `${row.name} description cleared` };
+  } catch (e) {
+    return toActionError(e);
+  }
 }

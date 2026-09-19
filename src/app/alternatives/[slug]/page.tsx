@@ -32,14 +32,29 @@ export async function generateMetadata({
 
   const substance = await getTargetSubstance(target.id);
 
+  // The templated line differs only by a name and a number, so leaving it in
+  // place means a hundred near-duplicate snippets competing with each other.
+  // Copy written in the admin's SEO panel always beats it
+  const written = target.description?.trim();
+
   return {
     title: goSublessOn(target.name),
-    description: `Free community-built alternatives to ${target.name}. ${formatYearly(target.monthlyPriceUsd)} you could stop paying.`,
+    description: written
+      ? metaSummary(written)
+      : `Free community-built alternatives to ${target.name}. ${formatYearly(target.monthlyPriceUsd)} you could stop paying.`,
     // Nothing built and nobody asking yet: the page is a template with a name in
     // it. `follow` stays on, so it still passes link equity to the catalog and
     // comes back into the index by itself the moment it has either
     robots: substance.indexable ? undefined : { index: false, follow: true },
   };
+}
+
+/** The first ~160 characters, cut at a word boundary rather than mid-word. */
+function metaSummary(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length <= 160) return flat;
+  const cut = flat.slice(0, 160);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}\u2026`;
 }
 
 export default async function AlternativesPage({

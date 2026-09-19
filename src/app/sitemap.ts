@@ -9,8 +9,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * People searching "calendly alternative" are the point of the site's organic
- * reach, so every /alternatives page is listed — including services with no
- * build yet, because those pages collect demand rather than traffic.
+ * reach, so the /alternatives pages lead the list — but only the ones with
+ * something on them. A service with no build and no votes is a template with a
+ * name in it, and listing a hundred of those spends the domain's crawl budget
+ * arguing for pages the site itself marks noindex.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // A sitemap is a claim that these pages are worth indexing, so it must not

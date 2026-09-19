@@ -139,6 +139,7 @@ Then copy `.env.example` to `.env.local` and fill in what you need.
 | `GITHUB_TOKEN` | Optional but strongly recommended — raises the API limit from 60/hour to 5000. |
 | `RESEND_API_KEY` | Leave empty and no mail is sent; every message is logged instead. |
 | `EMAIL_FROM` | Sender address, e.g. `Subless <noreply@gosubless.com>`. |
+| `GOOGLE_SITE_VERIFICATION` | Optional. The `content` value of Search Console's meta tag. Unset emits no tag; a DNS-verified domain property needs none at all. |
 
 **On `GITHUB_TOKEN`:** each project costs up to three API calls, so without a
 token a catalog of ~20 projects exhausts the hourly budget in a single sync. The
@@ -381,10 +382,59 @@ labelled as such, never conflated.
 ## Search
 
 `/alternatives/*` is the organic entry point: people search "calendly
-alternative". `sitemap.ts` lists every service — including ones with no build
-yet, since those pages collect demand rather than traffic — plus builds and
-challenges. `robots.ts` keeps `/admin`, `/savings`, `/notifications` and `/api`
-out of the index.
+alternative". `sitemap.ts` lists every service that has **a build or a vote**,
+plus builds and challenges; a service with neither is a template with a name in
+it, and the page says so itself with `noindex, follow`. The two apply the same
+test from `getIndexableTargetSlugs`, because a sitemap listing what a meta tag
+excludes is a site arguing with itself. `robots.ts` keeps `/admin`, `/savings`,
+`/notifications` and `/api` out of the index.
+
+Where a service has written copy, that copy is its meta description. The
+templated fallback differs only by a name and a number, so leaving it on every
+page means a hundred near-duplicate snippets competing with each other.
+
+### The SEO panel
+
+`/admin` carries the worklist for those pages, because there are more of them
+than anyone can hold in their head. It answers two questions separately:
+
+- **Is the page in the index?** The same build-or-vote test the sitemap and the
+  page apply, so the admin screen and the site never disagree about what is
+  published.
+- **Is it worth the click once it is there?** A description, plus either a build
+  or the challenge checklist.
+
+Indexed pages missing copy sort first — they are already collecting impressions
+and wasting them — and pages nobody can find sort last, because writing for them
+is writing into a drawer. The description is editable inline; the checklist is
+not, since it belongs to a contest.
+
+There is no chart of positions here. Impressions and average position live in
+Search Console, and an invented number on a site that measures honesty in
+figures is the worst thing this screen could draw. What an admin can act on is
+which page is missing what, and a box to write the missing part in.
+
+### Search Console
+
+Verification is either a DNS record or a meta tag, and the choice matters more
+than it looks:
+
+- A **domain property** (`gosubless.com`, DNS `TXT`) covers every subdomain and
+  both schemes, and survives a deploy that drops a tag. This is the one to hold.
+- A **URL-prefix property** (`https://gosubless.com`) verifies with the meta tag
+  from `GOOGLE_SITE_VERIFICATION`. Use it when DNS belongs to somebody else.
+
+Both, if you like — a property is a viewport on the same data, not a claim that
+excludes another.
+
+Then submit two sitemaps: `/sitemap.xml`, and `/feed.xml`. Google accepts an RSS
+feed as a sitemap, and the feed carries only what changed this week, so it is the
+cheaper of the two for a crawler to keep re-reading.
+
+Expect Coverage to report roughly a hundred URLs as **Excluded by 'noindex'**.
+That is this site working as designed, not a fault to chase: service pages with
+no build and no votes hold themselves out of the index until they have something
+to say, and return on their own the moment they do.
 
 `/alternatives` is the hub those pages hang off. Before it existed the only
 internal links to a service page were a handful of chips on `/catalog`, so most

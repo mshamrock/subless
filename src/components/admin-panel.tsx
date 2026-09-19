@@ -27,6 +27,7 @@ import {
 } from "@/lib/actions/admin";
 import { ActionMessage, SubmitButton } from "./form-status";
 import { ContentManager, type ContestPrefill } from "./content-manager";
+import { SeoPanel } from "./seo-panel";
 import { TargetIcon } from "./target-icon";
 import { formatDate, formatMoney, timeLeft } from "@/lib/utils";
 import type { ActionResult } from "@/lib/actions/guard";
@@ -42,15 +43,18 @@ interface WeeklyState {
 }
 
 type Managed = Awaited<ReturnType<typeof import("@/lib/actions/admin").getManagedContent>>;
+type Seo = Awaited<ReturnType<typeof import("@/lib/actions/admin").getSeoAudit>>;
 
 export function AdminPanel({
   data,
   state,
   managed,
+  seo,
 }: {
   data: AdminData;
   state: WeeklyState;
   managed: Managed;
+  seo: Seo;
 }) {
   const [message, setMessage] = useState<ActionResult | null>(null);
   const [prefill, setPrefill] = useState<ContestPrefill | null>(null);
@@ -69,7 +73,9 @@ export function AdminPanel({
             Moderation, the contest queue, and manual control over the weekly cycle.
           </p>
         </div>
-        <div className="flex gap-2">
+        {/* Six buttons in a row is wider than a phone; they wrap rather than
+            dragging the whole admin screen sideways */}
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={pending}
@@ -159,6 +165,8 @@ export function AdminPanel({
       <NewContestForm targets={data.targetList} prefill={prefill} onClear={() => setPrefill(null)} />
 
       <ContentManager initial={managed} targets={data.targetList} onPromote={setPrefill} />
+
+      <SeoPanel initial={seo} onPromote={setPrefill} />
 
       {/* Queue */}
       <section>
@@ -433,15 +441,28 @@ function NewContestForm({
       {open && (
         // Remounting on a new nomination is what lets uncontrolled inputs pick
         // up fresh defaults without fighting whatever was typed before
-        <form key={prefill?.nominationId ?? "blank"} action={action} className="card space-y-4 p-6">
+        <form
+          key={prefill ? `t${prefill.targetId ?? 0}n${prefill.nominationId ?? 0}` : "blank"}
+          action={action}
+          className="card space-y-4 p-6"
+        >
           <ActionMessage state={state} />
 
           {prefill && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-building)]/40 px-3 py-2 text-sm">
               <TargetIcon name={prefill.targetName} size={16} />
               <span>
-                From the nomination for <strong>{prefill.targetName}</strong> — creating this marks
-                it promoted on Most wanted.
+                {prefill.nominationId ? (
+                  <>
+                    From the nomination for <strong>{prefill.targetName}</strong> — creating this
+                    marks it promoted on Most wanted.
+                  </>
+                ) : (
+                  <>
+                    For <strong>{prefill.targetName}</strong> — the checklist you write here is what
+                    its service page is missing.
+                  </>
+                )}
               </span>
               <button
                 type="button"
@@ -450,7 +471,9 @@ function NewContestForm({
               >
                 start blank
               </button>
-              <input type="hidden" name="originNominationId" value={prefill.nominationId} />
+              {prefill.nominationId ? (
+                <input type="hidden" name="originNominationId" value={prefill.nominationId} />
+              ) : null}
             </div>
           )}
 
