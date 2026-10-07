@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { AuthPromptProvider } from "@/components/auth-prompt";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { GoogleAnalytics } from "@/components/google-analytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.url),
@@ -49,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
           <SiteFooter />
         </AuthPromptProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );
