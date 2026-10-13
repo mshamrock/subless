@@ -8,6 +8,11 @@ import { AdminPanel } from "@/components/admin-panel";
 export const metadata: Metadata = { title: "Admin" };
 export const dynamic = "force-dynamic";
 
+// The header's buttons run long jobs as server actions on this route — seeding
+// fetches icons and syncs every new repository from GitHub, the metrics sync
+// walks the whole catalog. They get the same allowance as the GitHub cron
+export const maxDuration = 300;
+
 export default async function AdminPage() {
   const session = await auth();
   if (!session?.user) redirect("/signin?callbackUrl=/admin");
