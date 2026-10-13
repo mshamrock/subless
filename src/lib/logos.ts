@@ -29,7 +29,7 @@ async function tryFetch(url: string): Promise<FetchedIcon | null> {
   try {
     const res = await fetch(url, {
       redirect: "follow",
-      headers: { "User-Agent": "subless-icon-fetcher" },
+      headers: { "User-Agent": "subless-icon-fetcher (+https://gosubless.com)" },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
@@ -45,6 +45,15 @@ async function tryFetch(url: string): Promise<FetchedIcon | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * One icon from a known address, for products whose domain cannot tell them
+ * apart. Every Adobe app shares adobe.com and so its favicon: fetched by host,
+ * Photoshop, Premiere and Acrobat all come back as the same red "A".
+ */
+export async function fetchIconFrom(url: string): Promise<FetchedIcon | null> {
+  return tryFetch(url);
 }
 
 /**

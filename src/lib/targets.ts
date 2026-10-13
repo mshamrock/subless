@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { nominations, targets } from "@/lib/db/schema";
-import { fetchProductIcon, iconUrl } from "@/lib/logos";
+import { fetchIconFrom, fetchProductIcon, iconUrl } from "@/lib/logos";
 import { slugify } from "@/lib/utils";
 
 /**
@@ -14,11 +14,15 @@ export async function ensureTargetIcon(
   targetId: number,
   slug: string,
   websiteUrl: string | null,
+  /** A product's own icon, when its domain's favicon belongs to the whole company. */
+  iconSource?: string | null,
 ): Promise<boolean> {
-  if (!websiteUrl) return false;
+  if (!websiteUrl && !iconSource) return false;
 
   try {
-    const icon = await fetchProductIcon(websiteUrl);
+    const icon =
+      (iconSource ? await fetchIconFrom(iconSource) : null) ??
+      (await fetchProductIcon(websiteUrl));
     if (!icon) return false;
 
     await db
