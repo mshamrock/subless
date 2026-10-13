@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Github, Globe, Star, GitFork, Users } from "lucide-react";
 import { LivenessBadge } from "./liveness-badge";
+import { ProjectIcon } from "./project-icon";
 import { TargetIcon } from "./target-icon";
 import { UpvoteButton } from "./upvote-button";
 import { TryButton } from "./try-button";
@@ -25,6 +26,7 @@ export interface ProjectCardData {
   pushedAt: Date | null;
   targets: TargetChip[];
   authorLogin?: string | null;
+  hasIcon?: boolean;
 }
 
 export function ProjectCard({
@@ -63,8 +65,17 @@ export function ProjectCard({
         />
       </div>
 
+      {/* A column of its own where there is room for one; on a phone the same
+          mark sits in the title row instead, so it costs no width */}
+      <div className="mt-0.5 hidden shrink-0 sm:block">
+        <ProjectIcon slug={project.slug} name={project.name} hasIcon={project.hasIcon} size={40} />
+      </div>
+
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="sm:hidden">
+            <ProjectIcon slug={project.slug} name={project.name} hasIcon={project.hasIcon} size={20} />
+          </span>
           <Link
             href={`/projects/${project.slug}`}
             className="text-[15px] font-semibold after:absolute after:inset-0 after:content-[''] group-hover:text-[var(--color-acid)]"

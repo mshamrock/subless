@@ -44,6 +44,9 @@ const projectCard = {
   licenseSpdx: projects.licenseSpdx,
   ownershipVerified: projects.ownershipVerified,
   createdAt: projects.createdAt,
+  // Whether there is an icon to draw — never the icon itself, which is base64
+  // and would ride along on every card in every list for nothing
+  hasIcon: sql<boolean>`${projects.logoData} is not null`,
   authorLogin: users.githubLogin,
   authorImage: users.image,
   stars: sql<number>`coalesce(${projectMetrics.stars}, 0)::int`,

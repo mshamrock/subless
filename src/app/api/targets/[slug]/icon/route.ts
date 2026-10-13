@@ -26,6 +26,10 @@ export async function GET(
   return new Response(Buffer.from(row.data, "base64"), {
     headers: {
       "Content-Type": row.contentType,
+      // Some stored icons are SVG; opened directly, one could run as a page on
+      // this origin. The sandbox stops that and changes nothing inside an <img>
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      "X-Content-Type-Options": "nosniff",
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
     },
   });

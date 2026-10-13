@@ -7,8 +7,63 @@ import {
   projectUpvotes,
   projects,
 } from "@/lib/db/schema";
-import { fetchRepoDetails, fetchRepoSnapshot } from "@/lib/github";
+import { fetchOwnerType, fetchRepoDetails, fetchRepoSnapshot } from "@/lib/github";
+import { fetchIconFrom, fetchProductIcon } from "@/lib/logos";
 import { computeScore } from "@/lib/score";
+
+/**
+ * Fetches and stores a project's icon, from the first source that is actually
+ * the product's own mark:
+ *
+ * 1. iconSource, when set — one organisation shipping many apps, where the
+ *    organisation's avatar would give every app the same face.
+ * 2. The owner's avatar, but only for an organisation. AppFlowy-IO, n8n-io and
+ *    calcom are organisations of one product, so their avatar is its logo. A
+ *    person's avatar is a person: on a build's card it would read as the
+ *    product's logo, and it is not one.
+ * 3. The project's website favicon — what a personal repository usually has
+ *    instead.
+ *
+ * Failing all three, the card draws the build's initial, which is honest.
+ */
+export async function ensureProjectIcon(
+  projectId: number,
+  ownerType?: "Organization" | "User" | null,
+): Promise<boolean> {
+  const [project] = await db
+    .select({
+      repoFullName: projects.repoFullName,
+      iconSource: projects.iconSource,
+      homepageUrl: projects.homepageUrl,
+    })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  if (!project?.repoFullName) return false;
+
+  const owner = project.repoFullName.split("/")[0];
+
+  let icon = project.iconSource ? await fetchIconFrom(project.iconSource).catch(() => null) : null;
+
+  if (!icon) {
+    const type = ownerType ?? (await fetchOwnerType(owner, process.env.GITHUB_TOKEN).catch(() => null));
+    if (type === "Organization") {
+      icon = await fetchIconFrom(`https://github.com/${owner}.png?size=128`).catch(() => null);
+    }
+  }
+
+  if (!icon && project.homepageUrl) {
+    icon = await fetchProductIcon(project.homepageUrl, { parentDomain: false }).catch(() => null);
+  }
+
+  if (!icon) return false;
+
+  await db
+    .update(projects)
+    .set({ logoData: icon.data, logoContentType: icon.contentType })
+    .where(eq(projects.id, projectId));
+  return true;
+}
 
 /**
  * Sync one project: GitHub snapshot → history row → score recompute.
@@ -85,6 +140,10 @@ export async function syncProject(projectId: number): Promise<{ ok: boolean; err
     if (Object.keys(backfill).length) {
       await db.update(projects).set(backfill).where(eq(projects.id, projectId));
     }
+
+    // Once, then never again: logos change roughly never, and the daily run
+    // would otherwise refetch every one of them for nothing
+    if (!project.logoData) await ensureProjectIcon(projectId, snap.ownerType);
 
     /**
      * Insights are a separate, best-effort pass. They cost several extra calls

@@ -61,7 +61,16 @@ export async function fetchIconFrom(url: string): Promise<FetchedIcon | null> {
  * rather than a generic placeholder. DuckDuckGo's endpoint resolves the icon
  * a site actually declares in its HTML, which /favicon.ico often does not.
  */
-export async function fetchProductIcon(websiteUrl: string | null): Promise<FetchedIcon | null> {
+export async function fetchProductIcon(
+  websiteUrl: string | null,
+  /**
+   * Whether a subdomain may borrow its parent's icon. Right for a company's
+   * product (analytics.google.com → Google), wrong for a project hosted on a
+   * shared platform: snimok-ten.vercel.app's parent is Vercel, and its icon is
+   * Vercel's logo, not the project's.
+   */
+  { parentDomain = true }: { parentDomain?: boolean } = {},
+): Promise<FetchedIcon | null> {
   if (!websiteUrl) return null;
   const host = hostOf(websiteUrl);
   if (!host) return null;
@@ -76,7 +85,7 @@ export async function fetchProductIcon(websiteUrl: string | null): Promise<Fetch
   // has none while google.com does. Falling back to the registrable domain gives
   // the parent brand's mark, which is still the right company's logo.
   const base = host.split(".").slice(-2).join(".");
-  if (base !== host) {
+  if (parentDomain && base !== host) {
     candidates.push(`https://icons.duckduckgo.com/ip3/${base}.ico`);
   }
 

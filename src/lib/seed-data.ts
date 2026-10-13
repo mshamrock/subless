@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { categories, projectTargets, projects, targets } from "@/lib/db/schema";
 import { parseRepoUrl } from "@/lib/github";
 import { ensureTargetIcon } from "@/lib/targets";
-import { syncProject } from "@/lib/sync";
+import { ensureProjectIcon, syncProject } from "@/lib/sync";
 import { slugify } from "@/lib/utils";
 
 /**
@@ -95,19 +95,22 @@ const PROJECTS = [
   // Apache-2.0, published from late September 2026 — and the agent claim is
   // checkable rather than reported: a large share of every repository's recent
   // commits carry "Co-Authored-By: Claude Opus 5.5". The taglines say alpha
-  // because the project says alpha; its own parity estimates run 25–65%
-  { name: "PhotoCraft", repo: "storytold/photocraft", targets: ["photoshop"], builtWith: "Claude Opus 5.5", tagline: "A clean-room Photoshop in Rust: layers, masks, PSD files — early alpha" },
-  { name: "LightCraft", repo: "storytold/lightcraft", targets: ["lightroom"], builtWith: "Claude Opus 5.5", tagline: "Non-destructive photo development in Rust, Lightroom-style — early alpha" },
-  { name: "VectorCraft", repo: "storytold/vectorcraft", targets: ["illustrator"], builtWith: "Claude Opus 5.5", tagline: "Vector illustration in Rust, in Illustrator's image — early alpha" },
-  { name: "DesignCraft", repo: "storytold/designcraft", targets: ["indesign"], builtWith: "Claude Opus 5.5", tagline: "Page layout and publishing in Rust, InDesign-style — early alpha" },
-  { name: "FilmCraft", repo: "storytold/filmcraft", targets: ["premiere-pro"], builtWith: "Claude Opus 5.5", tagline: "A nonlinear video editor in Rust, modelled on Premiere Pro — alpha" },
-  { name: "EffectCraft", repo: "storytold/effectcraft", targets: ["after-effects"], builtWith: "Claude Opus 5.5", tagline: "Motion graphics and compositing in Rust, After Effects-style — early alpha" },
-  { name: "PdfCraft", repo: "storytold/pdfcraft", targets: ["acrobat-pro"], builtWith: "Claude Opus 5.5", tagline: "Read, edit and protect PDFs without Acrobat — early alpha" },
-  { name: "WordCraft", repo: "storytold/wordcraft", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "A clean-room Microsoft Word in Rust that reads and writes .docx — alpha" },
-  { name: "GridCraft", repo: "storytold/gridcraft", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "An Excel-style spreadsheet in Rust with hundreds of functions — pre-alpha" },
-  { name: "DeckCraft", repo: "storytold/deckcraft", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "Presentations in Rust, modelled on PowerPoint — pre-alpha" },
-  { name: "CADCraft", repo: "storytold/cadcraft", targets: ["autocad"], builtWith: "Claude Opus 5.5", tagline: "Computer-aided drafting in Rust, AutoCAD-style — early development" },
-  { name: "SoundCraft", repo: "storytold/soundcraft", targets: ["pro-tools"], builtWith: "Claude Opus 5.5", tagline: "Recording and mixing in Rust, modelled on Pro Tools — pre-alpha" },
+  // because the project says alpha; its own parity estimates run 25–65%.
+  // Icons come from ArtCraft's launcher, which ships one per app: the apps
+  // share an organisation, so its avatar would give all thirteen one face.
+  // FigCraft is too new to have one yet and falls back to that avatar
+  { name: "PhotoCraft", repo: "storytold/photocraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/photocraft.png", targets: ["photoshop"], builtWith: "Claude Opus 5.5", tagline: "A clean-room Photoshop in Rust: layers, masks, PSD files — early alpha" },
+  { name: "LightCraft", repo: "storytold/lightcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/lightcraft.png", targets: ["lightroom"], builtWith: "Claude Opus 5.5", tagline: "Non-destructive photo development in Rust, Lightroom-style — early alpha" },
+  { name: "VectorCraft", repo: "storytold/vectorcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/vectorcraft.png", targets: ["illustrator"], builtWith: "Claude Opus 5.5", tagline: "Vector illustration in Rust, in Illustrator's image — early alpha" },
+  { name: "DesignCraft", repo: "storytold/designcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/designcraft.png", targets: ["indesign"], builtWith: "Claude Opus 5.5", tagline: "Page layout and publishing in Rust, InDesign-style — early alpha" },
+  { name: "FilmCraft", repo: "storytold/filmcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/filmcraft.png", targets: ["premiere-pro"], builtWith: "Claude Opus 5.5", tagline: "A nonlinear video editor in Rust, modelled on Premiere Pro — alpha" },
+  { name: "EffectCraft", repo: "storytold/effectcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/effectcraft.png", targets: ["after-effects"], builtWith: "Claude Opus 5.5", tagline: "Motion graphics and compositing in Rust, After Effects-style — early alpha" },
+  { name: "PdfCraft", repo: "storytold/pdfcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/pdfcraft.png", targets: ["acrobat-pro"], builtWith: "Claude Opus 5.5", tagline: "Read, edit and protect PDFs without Acrobat — early alpha" },
+  { name: "WordCraft", repo: "storytold/wordcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/wordcraft.png", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "A clean-room Microsoft Word in Rust that reads and writes .docx — alpha" },
+  { name: "GridCraft", repo: "storytold/gridcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/gridcraft.png", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "An Excel-style spreadsheet in Rust with hundreds of functions — pre-alpha" },
+  { name: "DeckCraft", repo: "storytold/deckcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/deckcraft.png", targets: ["microsoft-365"], builtWith: "Claude Opus 5.5", tagline: "Presentations in Rust, modelled on PowerPoint — pre-alpha" },
+  { name: "CADCraft", repo: "storytold/cadcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/cadcraft.png", targets: ["autocad"], builtWith: "Claude Opus 5.5", tagline: "Computer-aided drafting in Rust, AutoCAD-style — early development" },
+  { name: "SoundCraft", repo: "storytold/soundcraft", icon: "https://raw.githubusercontent.com/storytold/craft-launcher/main/assets/app-icons/soundcraft.png", targets: ["pro-tools"], builtWith: "Claude Opus 5.5", tagline: "Recording and mixing in Rust, modelled on Pro Tools — pre-alpha" },
   { name: "FigCraft", repo: "storytold/figcraft", targets: ["figma"], builtWith: "Claude Opus 5.5", tagline: "Interface design and prototyping in Rust, Figma-style — just started" },
 ];
 
@@ -179,6 +182,15 @@ export async function seedReferenceData(
       .where(eq(projects.repoUrl, repoUrl))
       .limit(1);
     if (existing) {
+      // An icon source is only ever added, never replaced — and when it is
+      // added, whatever icon came from the fallback was the wrong one
+      const source = "icon" in p ? p.icon : null;
+      if (source && !existing.iconSource) {
+        await db.update(projects).set({ iconSource: source }).where(eq(projects.id, existing.id));
+        await ensureProjectIcon(existing.id);
+      } else if (!existing.logoData) {
+        await ensureProjectIcon(existing.id);
+      }
       result.skipped++;
       continue;
     }
@@ -192,6 +204,7 @@ export async function seedReferenceData(
         repoUrl,
         repoFullName: repo.fullName,
         builtWith: "builtWith" in p ? p.builtWith : null,
+        iconSource: "icon" in p ? p.icon : null,
         status: "approved",
         approvedAt: new Date(),
         // No submitter: nobody here built these, and attributing them to an

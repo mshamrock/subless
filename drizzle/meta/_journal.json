@@ -50,6 +50,13 @@
       "when": 1789572982446,
       "tag": "0006_tranquil_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791880550101,
+      "tag": "0007_many_jackpot",
+      "breakpoints": true
     }
   ]
 }

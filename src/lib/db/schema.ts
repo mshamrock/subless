@@ -137,6 +137,12 @@ export const projects = pgTable(
     homepageUrl: text("homepage_url"),
     /** What it was built with: Claude Code, Cursor, Lovable… */
     builtWith: text("built_with"),
+    // The project's own mark, stored and served from our origin like a
+    // service's icon. iconSource names where to fetch it when the repository
+    // owner's avatar would be wrong — one organisation shipping many apps
+    logoData: text("logo_data"),
+    logoContentType: text("logo_content_type"),
+    iconSource: text("icon_source"),
     isSelfHosted: boolean("is_self_hosted").notNull().default(true),
     licenseSpdx: text("license_spdx"),
 

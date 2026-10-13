@@ -55,6 +55,8 @@ export interface RepoSnapshot {
   pushedAt: Date | null;
   licenseSpdx: string | null;
   archived: boolean;
+  /** Whether the repository belongs to an organisation or to one person. */
+  ownerType: "Organization" | "User" | null;
 }
 
 /**
@@ -104,7 +106,18 @@ export async function fetchRepoSnapshot(
     pushedAt: repo.pushed_at ? new Date(repo.pushed_at) : null,
     licenseSpdx: repo.license?.spdx_id ?? null,
     archived: Boolean(repo.archived),
+    ownerType:
+      repo.owner?.type === "Organization" || repo.owner?.type === "User" ? repo.owner.type : null,
   };
+}
+
+/** One account's type, for callers that have no repository snapshot to hand. */
+export async function fetchOwnerType(
+  login: string,
+  token?: string,
+): Promise<"Organization" | "User" | null> {
+  const account = await json<{ type?: string }>(`${API}/users/${login}`, token);
+  return account?.type === "Organization" || account?.type === "User" ? account.type : null;
 }
 
 /**
@@ -243,6 +256,8 @@ export async function checkPublicRepo(
       pushedAt: repo.pushed_at ? new Date(repo.pushed_at) : null,
       licenseSpdx: repo.license?.spdx_id ?? null,
       archived: Boolean(repo.archived),
+      ownerType:
+        repo.owner?.type === "Organization" || repo.owner?.type === "User" ? repo.owner.type : null,
     },
   };
 }
