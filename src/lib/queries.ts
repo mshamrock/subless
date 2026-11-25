@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { cachedPublic } from "@/lib/public-cache";
 import {
   categories,
   comments,
@@ -61,7 +62,7 @@ const projectCard = {
 
 export type ProjectCard = Awaited<ReturnType<typeof getCatalog>>[number];
 
-export async function getCatalog(filters: CatalogFilters = {}) {
+async function loadCatalog(filters: CatalogFilters = {}) {
   const { q, category, target, sort = "score", limit = 120 } = filters;
 
   const where = [eq(projects.status, "approved")];
@@ -332,7 +333,7 @@ export async function hasUpvoted(projectId: number, userId: string) {
 
 /* ────────────────────────────────  Services and categories  ──────────────────────────────── */
 
-export async function getTargetsWithCounts() {
+async function loadTargetsWithCounts() {
   return db
     .select({
       id: targets.id,
@@ -461,7 +462,7 @@ export async function getIndexableTargetSlugs(): Promise<Set<string>> {
   );
 }
 
-export async function getCategoriesWithCounts() {
+async function loadCategoriesWithCounts() {
   return db
     .select({
       id: categories.id,
@@ -511,7 +512,7 @@ export async function getContestBySlug(slug: string) {
   return contest ?? null;
 }
 
-export async function getContestEntries(contestId: number) {
+async function loadContestEntries(contestId: number) {
   const rows = await db
     .select({
       entryId: contestEntries.id,
@@ -584,7 +585,7 @@ export async function getUserVote(contestId: number, userId: string) {
   return row?.entryId ?? null;
 }
 
-export async function getContestList() {
+async function loadContestList() {
   return db
     .select({
       id: contests.id,
@@ -654,7 +655,7 @@ export async function getUserProjects(userId: string) {
 
 /* ────────────────────────────────  Nominations  ──────────────────────────────── */
 
-export async function getNominations(
+async function loadNominations(
   status: "approved" | "pending" = "approved",
   q?: string,
   category?: string,
@@ -727,7 +728,7 @@ export async function getUserNominationVotes(userId: string) {
  * tracks a real cancellation yet, and inflating the number would corrode the
  * one metric the whole brand is built on.
  */
-export async function getSiteStats() {
+async function loadSiteStats() {
   const [p] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(projects)
@@ -1036,7 +1037,7 @@ export interface BuilderRow {
  * challenge wins, then the reach of their published work. A builder whose
  * alternatives people genuinely switched to outranks one with more stars.
  */
-export async function getBuilderLeaderboard(): Promise<BuilderRow[]> {
+async function loadBuilderLeaderboard(): Promise<BuilderRow[]> {
   const base = await db
     .select({
       id: users.id,
@@ -1271,3 +1272,13 @@ export async function getProjectTestRating(projectId: number) {
 
   return { rating, testers, perChallenge };
 }
+
+// Shared by every visitor: served from the public cache (see ./public-cache.ts)
+export const getCatalog = cachedPublic("getCatalog", loadCatalog);
+export const getContestEntries = cachedPublic("getContestEntries", loadContestEntries);
+export const getNominations = cachedPublic("getNominations", loadNominations);
+export const getSiteStats = cachedPublic("getSiteStats", loadSiteStats);
+export const getBuilderLeaderboard = cachedPublic("getBuilderLeaderboard", loadBuilderLeaderboard);
+export const getContestList = cachedPublic("getContestList", loadContestList);
+export const getTargetsWithCounts = cachedPublic("getTargetsWithCounts", loadTargetsWithCounts);
+export const getCategoriesWithCounts = cachedPublic("getCategoriesWithCounts", loadCategoriesWithCounts);

@@ -1,7 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { projects, users } from "@/lib/db/schema";
-import { getWeeklyState } from "@/lib/cycle";
+import { loadWeeklyState } from "@/lib/cycle";
 import { resolveRecipient } from "./recipients";
 import { sendAll } from "./send";
 import { weeklyEmail } from "./templates";
@@ -14,7 +14,8 @@ import { weeklyEmail } from "./templates";
  * the state the tick has just produced.
  */
 export async function sendWeeklyDigest() {
-  const state = await getWeeklyState();
+  // uncached: the digest runs right after the tick moved the contests
+  const state = await loadWeeklyState();
 
   let winner: { challenge: string; project: string; slug: string } | null = null;
   if (state.finished?.winnerProjectId) {

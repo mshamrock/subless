@@ -40,7 +40,9 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Read once here rather than threading a `signedIn` prop through every page
   // into every button that happens to need an account
-  const session = await auth();
+  // A database outage must not take down every page through the header:
+  // render signed-out and let the page itself show what is unavailable
+  const session = await auth().catch(() => null);
 
   return (
     <html lang="en">

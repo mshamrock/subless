@@ -1,4 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
+import { PUBLIC_TAG } from "@/lib/public-cache";
 import { runWeeklyTick } from "@/lib/cycle";
 import { sendWeeklyDigest } from "@/lib/email/weekly";
 
@@ -22,6 +24,7 @@ export async function GET(request: Request) {
 
   try {
     const result = await runWeeklyTick("cron");
+    revalidateTag(PUBLIC_TAG);
 
     // Sent after the tick, so the digest describes the week that just began.
     // A mail failure must not make the cron look failed — the cycle already moved.
