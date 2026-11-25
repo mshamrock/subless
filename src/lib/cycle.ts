@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { cachedPublic } from "@/lib/public-cache";
 import {
   contests,
   contestEntries,
@@ -246,8 +247,12 @@ export async function uniqueContestSlug(name: string) {
   return slug;
 }
 
-/** Current pipeline state — this is what the homepage renders. */
-export async function getWeeklyState() {
+/**
+ * Current pipeline state — this is what the homepage renders.
+ * Uncached: pages use getWeeklyState below; this is for code that must see
+ * the state right after a write (e.g. the weekly digest after the tick).
+ */
+export async function loadWeeklyState() {
   // Joined rather than selected bare: every surface that names a contest also
   // shows the product it replaces, icon included
   const withTarget = () =>
@@ -292,3 +297,6 @@ export function canSubmitEntry(status: string) {
 export function canVote(status: string) {
   return status === "voting";
 }
+
+// Rendered on every homepage view: served from the public cache (see ./public-cache.ts)
+export const getWeeklyState = cachedPublic("getWeeklyState", loadWeeklyState);

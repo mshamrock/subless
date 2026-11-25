@@ -1,4 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
+import { PUBLIC_TAG } from "@/lib/public-cache";
 import { syncAllProjects } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ export async function GET(request: Request) {
   }
 
   const result = await syncAllProjects();
+  revalidateTag(PUBLIC_TAG);
   // result.ok — это счётчик успешных синхронизаций, не флаг ответа
   return NextResponse.json({ success: true, ...result });
 }

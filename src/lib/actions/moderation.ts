@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/revalidate";
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
